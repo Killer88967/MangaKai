@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { coverUrl, localizedText, type MangaDexManga } from "@/lib/mangadex";
 
 interface MangaCardProps {
@@ -12,7 +13,10 @@ export function MangaCard({ manga }: MangaCardProps) {
     localizedText(manga.attributes.description) || "No description available.";
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5.5 transition duration-300 hover:-translate-y-1 hover:border-violet-400/40 hover:bg-white/8">
+    <Link
+      href={`/manga/${manga.id}`}
+      className="block group overflow-hidden rounded-2xl border border-white/10 bg-white/5.5 transition duration-300 hover:-translate-y-1 hover:border-violet-400/40 hover:bg-white/8"
+    >
       <div className="relative aspect-2/3 overflow-hidden bg-zinc-900">
         {cover ? (
           <Image
@@ -46,6 +50,6 @@ export function MangaCard({ manga }: MangaCardProps) {
           )}
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
