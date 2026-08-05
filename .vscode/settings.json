@@ -17,9 +17,5 @@
   "files.associations": {
     "*.json": "json",
     "*.css": "tailwindcss"
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "terminal.integrated.fontFamily": "MesloLGS NF"
+  }
 }

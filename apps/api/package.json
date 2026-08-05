@@ -1,21 +1,20 @@
 {
-  "name": "api",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "@mangakai/api",
+  "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "check-types": "tsc --noEmit"
+  },
   "dependencies": {
-    "hono": "^4.13.0"
+    "@hono/node-server": "^1",
+    "@mangakai/mangadex": "workspace:*",
+    "hono": "^4"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
-    "tsx": "^4.23.5",
-    "typescript": "^7.0.2"
+    "@types/node": "^24",
+    "tsx": "^4",
+    "typescript": "^5.9"
   }
 }
