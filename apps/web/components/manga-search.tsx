@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import type { MangaSummary } from "@mangakai/shared";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { searchManga, type MangaDexManga } from "@/lib/mangadex";
+import { searchManga } from "@/lib/api";
 import { MangaCard } from "./manga-card";
+
+const MIN_QUERY_LENGTH = 3;
 
 function SearchSkeletons() {
   return (
@@ -25,47 +28,48 @@ function SearchSkeletons() {
   );
 }
 
-export function MangaSearch() {
+interface MangaSearchProps {
+  /** Shown while there is no active search — the homepage rows live here. */
+  children?: ReactNode;
+}
+
+export function MangaSearch({ children }: MangaSearchProps) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 400);
   const [result, setResult] = useState<{
     query: string;
-    manga: MangaDexManga[];
+    manga: MangaSummary[];
     error: string | null;
   }>({ query: "", manga: [], error: null });
-  const loading = Boolean(debouncedQuery && result.query !== debouncedQuery);
-  const manga = result.query === debouncedQuery ? result.manga : [];
-  const error = result.query === debouncedQuery ? result.error : null;
+  // Too-short queries are treated as no query at all, so the derived values
+  // below fall back to the idle state without the effect resetting anything.
+  const activeQuery =
+    debouncedQuery.length >= MIN_QUERY_LENGTH ? debouncedQuery : "";
+  const loading = Boolean(activeQuery && result.query !== activeQuery);
+  const manga = result.query === activeQuery ? result.manga : [];
+  const error = result.query === activeQuery ? result.error : null;
 
   useEffect(() => {
-    if (debouncedQuery.length < 3) {
-      setResult({
-        query: "",
-        manga: [],
-        error: null,
-      });
-
-      return;
-    }
+    if (!activeQuery) return;
 
     const controller = new AbortController();
 
-    searchManga(debouncedQuery, controller.signal)
+    searchManga(activeQuery, controller.signal)
       .then((response) => {
-        setResult({ query: debouncedQuery, manga: response.data, error: null });
+        setResult({ query: activeQuery, manga: response.data, error: null });
       })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError")
           return;
         setResult({
-          query: debouncedQuery,
+          query: activeQuery,
           manga: [],
           error: reason instanceof Error ? reason.message : "Search failed.",
         });
       });
 
     return () => controller.abort();
-  }, [debouncedQuery]);
+  }, [activeQuery]);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -111,15 +115,15 @@ export function MangaSearch() {
         >
           {error}
         </div>
-      ) : debouncedQuery && manga.length === 0 ? (
+      ) : activeQuery && manga.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/4 p-12 text-center text-zinc-400">
-          No manga found for “{debouncedQuery}”.
+          No manga found for “{activeQuery}”.
         </div>
       ) : manga.length > 0 ? (
         <section aria-live="polite">
           <p className="mb-5 text-sm text-zinc-500">
             {manga.length} {manga.length === 1 ? "result" : "results"} for “
-            {debouncedQuery}”
+            {activeQuery}”
           </p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {manga.map((item) => (
@@ -128,9 +132,11 @@ export function MangaSearch() {
           </div>
         </section>
       ) : (
-        <div className="py-16 text-center text-sm text-zinc-600">
-          Start typing to explore manga.
-        </div>
+        (children ?? (
+          <div className="py-16 text-center text-sm text-zinc-600">
+            Start typing to explore manga.
+          </div>
+        ))
       )}
     </div>
   );

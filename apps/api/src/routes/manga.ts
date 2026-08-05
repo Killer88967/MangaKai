@@ -1,5 +1,19 @@
 import { Hono } from "hono";
-import { searchManga, getManga } from "@mangakai/mangadex";
+import { getMangaById, searchManga } from "../services/manga";
+
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Reads a non-negative integer query param, falling back when absent or junk. */
+function intParam(value: string | undefined, fallback: number, max: number) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 0) return fallback;
+
+  return Math.min(parsed, max);
+}
 
 const manga = new Hono();
 
@@ -10,10 +24,11 @@ manga.get("/search", async (c) => {
     return c.json({ error: "Missing search query." }, 400);
   }
 
-  try {
-    const results = await searchManga({ title: query });
+  const limit = intParam(c.req.query("limit"), DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = intParam(c.req.query("offset"), 0, 10_000);
 
-    return c.json(results);
+  try {
+    return c.json(await searchManga(query, { limit, offset }));
   } catch (error) {
     console.error("MangaDex search failed", error);
     return c.json({ error: "Unable to search manga right now." }, 502);
@@ -23,10 +38,12 @@ manga.get("/search", async (c) => {
 manga.get("/:id", async (c) => {
   const id = c.req.param("id");
 
-  try {
-    const result = await getManga(id);
+  if (!UUID_PATTERN.test(id)) {
+    return c.json({ error: "Invalid manga id." }, 400);
+  }
 
-    return c.json(result);
+  try {
+    return c.json(await getMangaById(id));
   } catch (error) {
     console.error("Failed to fetch manga", error);
 

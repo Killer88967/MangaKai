@@ -1,12 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  coverUrl,
-  getManga,
-  localizedText,
-  relationshipNames,
-  type MangaDexManga,
-} from "@/lib/mangadex";
+import { getManga } from "@/lib/api";
 
 interface MangaPageProps {
   params: Promise<{ id: string }>;
@@ -22,11 +16,7 @@ function formatLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function AlternativeTitles({ manga }: { manga: MangaDexManga }) {
-  const titles = (manga.attributes.altTitles ?? [])
-    .flatMap((title) => Object.values(title))
-    .filter((title, index, all) => all.indexOf(title) === index);
-
+function AlternativeTitles({ titles }: { titles: string[] }) {
   if (titles.length === 0) return null;
 
   const titleList = (
@@ -84,24 +74,15 @@ function LoadError() {
 
 export default async function MangaPage({ params }: MangaPageProps) {
   const { id } = await params;
-  const response = await getManga(id).catch(() => null);
+  const manga = await getManga(id).catch(() => null);
 
-  if (!response) return <LoadError />;
+  if (!manga) return <LoadError />;
 
-  const manga = response.data;
-  const title = localizedText(manga.attributes.title) || "Untitled";
-  const description =
-    localizedText(manga.attributes.description) || "No description available.";
-  const cover = coverUrl(manga);
-  const authors = relationshipNames(manga, "author");
-  const artists = relationshipNames(manga, "artist");
-  const tags = manga.attributes.tags ?? [];
+  const description = manga.description || "No description available.";
   const metadata = {
-    status: formatLabel(manga.attributes.status),
-    year: manga.attributes.year?.toString() ?? "Unknown",
-    rating: manga.attributes.contentRating
-      ? formatLabel(manga.attributes.contentRating)
-      : "Unknown",
+    status: formatLabel(manga.status),
+    year: manga.year?.toString() ?? "Unknown",
+    rating: manga.contentRating ? formatLabel(manga.contentRating) : "Unknown",
   };
 
   return (
@@ -117,10 +98,10 @@ export default async function MangaPage({ params }: MangaPageProps) {
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5.5 shadow-2xl shadow-black/20">
           <div className="grid gap-8 p-5 sm:p-7 md:grid-cols-[240px_1fr]">
             <div className="relative mx-auto aspect-2/3 w-full max-w-60 overflow-hidden rounded-2xl bg-zinc-900 shadow-xl md:mx-0">
-              {cover ? (
+              {manga.cover ? (
                 <Image
-                  src={cover}
-                  alt={`${title} cover`}
+                  src={manga.cover.medium}
+                  alt={`${manga.title} cover`}
                   fill
                   priority
                   sizes="(max-width: 767px) 240px, 240px"
@@ -138,10 +119,10 @@ export default async function MangaPage({ params }: MangaPageProps) {
                 Manga
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                {title}
+                {manga.title}
               </h1>
               <div className="mt-3">
-                <AlternativeTitles manga={manga} />
+                <AlternativeTitles titles={manga.altTitles} />
               </div>
 
               <dl className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -171,13 +152,13 @@ export default async function MangaPage({ params }: MangaPageProps) {
             <section>
               <h2 className="text-xl font-semibold text-white">Tags</h2>
               <div className="mt-3 flex flex-wrap gap-2">
-                {tags.length > 0 ? (
-                  tags.map((tag) => (
+                {manga.tags.length > 0 ? (
+                  manga.tags.map((tag) => (
                     <span
                       key={tag.id}
                       className="rounded-full border border-violet-400/15 bg-violet-400/10 px-3 py-1.5 text-sm text-violet-200"
                     >
-                      {localizedText(tag.attributes.name)}
+                      {tag.name}
                     </span>
                   ))
                 ) : (
@@ -187,8 +168,8 @@ export default async function MangaPage({ params }: MangaPageProps) {
             </section>
 
             <section className="grid gap-6 rounded-2xl border border-white/8 bg-white/4 p-5 sm:grid-cols-2">
-              <PeopleList label="Authors" names={authors} />
-              <PeopleList label="Artists" names={artists} />
+              <PeopleList label="Authors" names={manga.authors} />
+              <PeopleList label="Artists" names={manga.artists} />
             </section>
           </div>
         </div>

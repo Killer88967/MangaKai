@@ -3,14 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
     "build": "tsc",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "^1",
+    "@hono/zod-validator": "^0.9.0",
+    "@mangakai/db": "workspace:*",
     "@mangakai/mangadex": "workspace:*",
-    "hono": "^4"
+    "@mangakai/shared": "workspace:*",
+    "hono": "^4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24",
