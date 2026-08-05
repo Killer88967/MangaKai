@@ -140,3 +140,67 @@ export async function setActiveCommand(
       : `${color.bold(banner.title)} is hidden but kept as a draft.`,
   );
 }
+
+/**
+ * Retires one banner and publishes another in a single step.
+ *
+ * The new banner goes live *before* the old one is hidden. The reverse order
+ * leaves a moment with nothing on the page, and since clients are subscribed
+ * to the banner stream they would see the gap flicker past.
+ */
+export async function switchCommand(
+  fromId?: string,
+  toId?: string,
+): Promise<void> {
+  p.intro(color.bgMagenta(color.black(" MangaKai · switch banner ")));
+
+  const all = await listBanners();
+  const find = (id: string) =>
+    all.find((item) => item.id === id || item.id.startsWith(id));
+
+  const from = fromId
+    ? find(fromId)
+    : await pickBanner(
+        "Which banner should be retired?",
+        (item) => item.active,
+      );
+
+  if (!from) {
+    p.cancel(`No banner found matching "${fromId}".`);
+    process.exit(1);
+  }
+
+  const to = toId
+    ? find(toId)
+    : await pickBanner(
+        "Which banner should replace it?",
+        (item) => item.id !== from.id,
+      );
+
+  if (!to) {
+    p.cancel(`No banner found matching "${toId}".`);
+    process.exit(1);
+  }
+
+  if (to.id === from.id) {
+    p.cancel("That is the same banner. Nothing to switch.");
+    process.exit(1);
+  }
+
+  p.note(
+    `${color.dim("out")}  ${from.title}\n${color.dim("in")}   ${to.title}`,
+    "Switch",
+  );
+
+  const confirmed = await p.confirm({ message: "Apply this switch?" });
+
+  if (p.isCancel(confirmed) || !confirmed) {
+    p.cancel("Cancelled. Nothing changed.");
+    process.exit(0);
+  }
+
+  await updateBanner(to.id, { active: true });
+  await updateBanner(from.id, { active: false });
+
+  p.outro(`${color.bold(to.title)} is live. ${from.title} is now a draft.`);
+}

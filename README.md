@@ -185,6 +185,7 @@ automatically, so there is nothing to configure.
 pnpm banner              # interactive create
 pnpm banner list         # every banner with its status
 pnpm banner edit         # change fields on an existing banner
+pnpm banner switch       # retire one banner and publish another
 pnpm banner publish      # pick a draft and make it live
 pnpm banner unpublish    # hide one without deleting it
 pnpm banner delete       # pick one and delete it
@@ -287,6 +288,52 @@ pnpm banner list --json
 | `--ends`    | ISO 8601.                                 |
 | `--draft`   | Save without publishing.                  |
 | `--json`    | With `list`, print raw JSON.              |
+
+## Staff picks CLI
+
+The Staff Picks row on the homepage. Ids are **MangaDex manga ids**, not
+staff-pick row ids, and a short prefix works anywhere a full id does.
+
+```bash
+pnpm picks                  # every pick, live and draft
+pnpm picks active           # only what the homepage is showing
+pnpm picks add              # search MangaDex by title, then add
+pnpm picks edit      [id]   # change the editorial note
+pnpm picks publish   [id]   # put a draft on the homepage
+pnpm picks unpublish [id]   # hide without deleting
+pnpm picks switch [from] [to]  # swap the manga in a slot
+pnpm picks move   [id] [n]     # reorder; 0 is first
+pnpm picks delete    [id]   # remove permanently
+```
+
+Leave the id off and you get a picker.
+
+`add` searches MangaDex by title so you never have to hunt down a UUID:
+
+```
+┌  MangaKai · add staff pick
+│
+◇  Search MangaDex for a title
+│  berserk
+│
+◇  Which one?
+│  Berserk  (1989 · completed)
+│
+◇  Editorial note
+│  Miura's masterpiece. Nothing else looks like it.
+│
+◇  Publish it to the homepage now?  Yes
+│
+└  Berserk is live on the homepage.
+```
+
+`switch` replaces the manga in a slot, keeping its position and published
+state. **The old note is not carried over** — a note written about one series
+is wrong about another, so it asks for a new one.
+
+`move` renumbers every pick so positions stay contiguous from zero, and prints
+the resulting order. Positions past the end clamp, so `pnpm picks move <id> 99`
+means "put it last".
 
 ## Admin API
 
@@ -494,7 +541,21 @@ You get the full live set on connect, again on every change, and a `ping` every
 ### Staff picks
 
 Stores a MangaDex manga id plus MangaKai's own note. The manga is fetched from
-MangaDex at read time.
+MangaDex at read time. Picks have an `active` flag like banners, so one can be
+staged before it goes live; only active picks reach the homepage.
+
+| Endpoint                                | Does                                    |
+| --------------------------------------- | --------------------------------------- |
+| `GET /admin/staff-picks`                | Every pick, drafts included             |
+| `POST /admin/staff-picks`               | Add or upsert by `mangaId`              |
+| `PATCH /admin/staff-picks/:mangaId`     | `note`, `position`, `active`            |
+| `POST /admin/staff-picks/switch`        | Swap the manga in a slot (`from`, `to`) |
+| `POST /admin/staff-picks/:mangaId/move` | Reorder, renumbering the rest           |
+| `DELETE /admin/staff-picks/:mangaId`    | Remove permanently                      |
+
+Unlike the public list, the admin list keeps picks whose manga MangaDex no
+longer returns — you need to see a broken pick in order to fix it, where a
+visitor should never meet one. Those show a null `title`.
 
 ```bash
 curl -X POST localhost:8787/admin/staff-picks \
@@ -518,8 +579,8 @@ curl -X DELETE localhost:8787/admin/staff-picks/<mangaId> -H "authorization: $TO
 | `GET /api/banners`         | Currently live banners                          |
 | `GET /api/banners/stream`  | SSE feed of banner changes                      |
 
-
 # Test
+
 **Links:**
 
 - Official English Translation [<Pocket Comics>](https://www.pocketcomics.com/comic/320)

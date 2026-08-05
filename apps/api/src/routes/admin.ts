@@ -12,8 +12,11 @@ import {
 } from "../services/banners";
 import {
   addStaffPick,
-  listStaffPicks,
+  listAllStaffPicks,
+  moveStaffPick,
   removeStaffPick,
+  switchStaffPick,
+  updateStaffPick,
 } from "../services/staff-picks";
 
 const UUID = z.string().uuid();
@@ -43,7 +46,28 @@ const staffPickInput = z.object({
   mangaId: UUID,
   note: nullableText,
   position: z.number().int().min(0).optional(),
+  active: z.boolean().optional(),
 });
+
+/** Refuses an empty body, which would otherwise report success and change nothing. */
+const staffPickPatch = z
+  .object({
+    note: nullableText,
+    position: z.number().int().min(0).optional(),
+    active: z.boolean().optional(),
+  })
+  .refine(
+    (patch) => Object.keys(patch).length > 0,
+    "Provide at least one field to update.",
+  );
+
+const staffPickSwitch = z.object({
+  from: UUID,
+  to: UUID,
+  note: nullableText,
+});
+
+const staffPickMove = z.object({ position: z.number().int().min(0) });
 
 const admin = new Hono();
 
@@ -91,11 +115,59 @@ admin.delete("/banners/:id", async (c) => {
   return c.body(null, 204);
 });
 
-admin.get("/staff-picks", async (c) => c.json(await listStaffPicks()));
+admin.get("/staff-picks", async (c) => c.json(await listAllStaffPicks()));
 
 admin.post("/staff-picks", validateJson(staffPickInput), async (c) => {
   return c.json(await addStaffPick(c.req.valid("json")), 201);
 });
+
+/**
+ * Registered before the `/:mangaId` handlers so "switch" is not read as an id.
+ */
+admin.post("/staff-picks/switch", validateJson(staffPickSwitch), async (c) => {
+  const { from, to, note } = c.req.valid("json");
+  const pick = await switchStaffPick(from, to, note);
+
+  if (!pick) return c.json({ error: "Staff pick not found." }, 404);
+
+  return c.json(pick);
+});
+
+admin.patch(
+  "/staff-picks/:mangaId",
+  validateJson(staffPickPatch),
+  async (c) => {
+    const mangaId = c.req.param("mangaId");
+
+    if (!UUID.safeParse(mangaId).success) {
+      return c.json({ error: "Invalid manga id." }, 400);
+    }
+
+    const pick = await updateStaffPick(mangaId, c.req.valid("json"));
+
+    if (!pick) return c.json({ error: "Staff pick not found." }, 404);
+
+    return c.json(pick);
+  },
+);
+
+admin.post(
+  "/staff-picks/:mangaId/move",
+  validateJson(staffPickMove),
+  async (c) => {
+    const mangaId = c.req.param("mangaId");
+
+    if (!UUID.safeParse(mangaId).success) {
+      return c.json({ error: "Invalid manga id." }, 400);
+    }
+
+    const picks = await moveStaffPick(mangaId, c.req.valid("json").position);
+
+    if (!picks) return c.json({ error: "Staff pick not found." }, 404);
+
+    return c.json(picks);
+  },
+);
 
 admin.delete("/staff-picks/:mangaId", async (c) => {
   const mangaId = c.req.param("mangaId");

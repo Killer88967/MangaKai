@@ -8,6 +8,7 @@ import {
   listCommand,
   listJsonCommand,
   setActiveCommand,
+  switchCommand,
 } from "./commands/manage";
 
 const HELP = `
@@ -20,6 +21,7 @@ const HELP = `
     pnpm banner edit      [id]      ${color.dim("change fields, with a from → to review")}
     pnpm banner publish   [id]      ${color.dim("make a draft live")}
     pnpm banner unpublish [id]      ${color.dim("hide one without deleting it")}
+    pnpm banner switch [out] [in]   ${color.dim("retire one and publish another")}
     pnpm banner delete    [id]      ${color.dim("delete permanently")}
 
   ${color.dim("Leave [id] off and you get a picker. A short id prefix works too.")}
@@ -81,6 +83,8 @@ async function main() {
     case "edit":
     case "update":
       return editCommand(id);
+    case "switch":
+      return switchCommand(id, positionals[2]);
     case "publish":
       return setActiveCommand(true, id);
     case "unpublish":

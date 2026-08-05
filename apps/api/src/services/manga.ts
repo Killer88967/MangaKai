@@ -8,6 +8,7 @@ import {
 } from "@mangakai/mangadex";
 import type {
   Manga,
+  MangaCategory,
   MangaCover,
   MangaSummary,
   MangaTag,
@@ -109,35 +110,48 @@ export async function getMangaById(id: string): Promise<Manga> {
   return toManga(response.data);
 }
 
-/** Most followed on MangaDex — our stand-in for "popular" until we track our own. */
-export async function getPopularManga(limit: number): Promise<MangaSummary[]> {
+/**
+ * How each MangaKai category maps onto a MangaDex sort. Keeping the mapping
+ * here means clients never learn MangaDex's field names, so we can change what
+ * "popular" means — to our own follow counts, say — without touching them.
+ */
+const CATEGORY_ORDERS = {
+  popular: { followedCount: "desc" },
+  latest: { latestUploadedChapter: "desc" },
+  recent: { createdAt: "desc" },
+} as const satisfies Record<MangaCategory, Record<string, "desc">>;
+
+/** A browsable, pageable row. The homepage takes the first page of each. */
+export async function browseManga(
+  category: MangaCategory,
+  { limit, offset }: { limit: number; offset: number },
+): Promise<Paginated<MangaSummary>> {
   const response = await listMangaDexManga({
     limit,
-    order: { followedCount: "desc" },
+    offset,
+    order: CATEGORY_ORDERS[category],
     hasAvailableChapters: true,
   });
 
-  return response.data.map(toSummary);
+  return {
+    data: response.data.map(toSummary),
+    total: response.total,
+    limit: response.limit,
+    offset: response.offset,
+  };
+}
+
+/** Most followed on MangaDex — our stand-in for "popular" until we track our own. */
+export async function getPopularManga(limit: number): Promise<MangaSummary[]> {
+  return (await browseManga("popular", { limit, offset: 0 })).data;
 }
 
 export async function getLatestUpdates(limit: number): Promise<MangaSummary[]> {
-  const response = await listMangaDexManga({
-    limit,
-    order: { latestUploadedChapter: "desc" },
-    hasAvailableChapters: true,
-  });
-
-  return response.data.map(toSummary);
+  return (await browseManga("latest", { limit, offset: 0 })).data;
 }
 
 export async function getRecentlyAdded(limit: number): Promise<MangaSummary[]> {
-  const response = await listMangaDexManga({
-    limit,
-    order: { createdAt: "desc" },
-    hasAvailableChapters: true,
-  });
-
-  return response.data.map(toSummary);
+  return (await browseManga("recent", { limit, offset: 0 })).data;
 }
 
 /**

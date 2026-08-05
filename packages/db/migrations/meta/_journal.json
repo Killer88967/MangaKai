@@ -8,6 +8,13 @@
       "when": 1785896995828,
       "tag": "0000_broken_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785966070008,
+      "tag": "0001_slim_psylocke",
+      "breakpoints": true
     }
   ]
 }

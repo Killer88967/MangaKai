@@ -1,6 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+import { ChapterList } from "@/components/chapter-list";
 import { getManga } from "@/lib/api";
+
+function ChapterListSkeleton() {
+  return (
+    <div className="space-y-2" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="h-14 animate-pulse rounded-xl bg-white/5" />
+      ))}
+    </div>
+  );
+}
 
 interface MangaPageProps {
   params: Promise<{ id: string }>;
@@ -170,6 +182,20 @@ export default async function MangaPage({ params }: MangaPageProps) {
             <section className="grid gap-6 rounded-2xl border border-white/8 bg-white/4 p-5 sm:grid-cols-2">
               <PeopleList label="Authors" names={manga.authors} />
               <PeopleList label="Artists" names={manga.artists} />
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-white">Chapters</h2>
+              <div className="mt-3">
+                {/*
+                  Streamed in its own Suspense boundary: the chapter feed is a
+                  second MangaDex round trip, and the details above should not
+                  wait on it.
+                */}
+                <Suspense fallback={<ChapterListSkeleton />}>
+                  <ChapterList mangaId={manga.id} title={manga.title} />
+                </Suspense>
+              </div>
             </section>
           </div>
         </div>

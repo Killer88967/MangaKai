@@ -42,6 +42,8 @@ export const staffPicks = pgTable("staff_picks", {
   /** Why the staff picked it — MangaKai's own editorial voice. */
   note: text("note"),
   position: integer("position").notNull().default(0),
+  /** Draft picks stay out of the homepage until published. */
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

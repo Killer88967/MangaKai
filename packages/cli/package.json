@@ -8,7 +8,8 @@
   },
   "scripts": {
     "cli": "tsx --env-file-if-exists=../../apps/api/.env src/index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "picks": "tsx --env-file-if-exists=../../apps/api/.env src/picks.ts"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",

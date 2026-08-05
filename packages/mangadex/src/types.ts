@@ -84,3 +84,48 @@ export interface MangaDexEntity<T> {
   response: "entity";
   data: T;
 }
+
+/** MangaDex serves chapter images from a per-chapter node, not a fixed CDN. */
+export interface AtHomeServer {
+  baseUrl: string;
+  chapter: {
+    hash: string;
+    /** Full-quality page filenames. */
+    data: string[];
+    /** Smaller, recompressed versions of the same pages. */
+    dataSaver: string[];
+  };
+}
+
+export interface MangaDexChapter {
+  id: string;
+  type: "chapter";
+  attributes: {
+    volume: string | null;
+    chapter: string | null;
+    title: string | null;
+    translatedLanguage: string;
+    /**
+     * Set when the chapter lives on another site (official simulpubs, for
+     * example). Those have no pages and cannot be read through MangaDex.
+     */
+    externalUrl: string | null;
+    isUnavailable: boolean;
+    publishAt: string;
+    readableAt: string;
+    pages: number;
+  };
+  relationships: MangaDexRelationship[];
+}
+
+export type ChapterOrderField =
+  "chapter" | "volume" | "publishAt" | "readableAt";
+
+export interface ListChaptersOptions {
+  mangaId: string;
+  limit?: number;
+  offset?: number;
+  /** MangaDex needs explicit languages or it returns every translation. */
+  translatedLanguage?: string[];
+  order?: Partial<Record<ChapterOrderField, SortDirection>>;
+}

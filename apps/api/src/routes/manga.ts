@@ -1,5 +1,14 @@
 import { Hono } from "hono";
-import { getMangaById, searchManga } from "../services/manga";
+import { MANGA_CATEGORIES, type MangaCategory } from "@mangakai/shared";
+import { getChapters } from "../services/chapters";
+import { browseManga, getMangaById, searchManga } from "../services/manga";
+
+/** MangaDex caps a feed page at 100, and a chapter list wants them all. */
+const CHAPTER_LIMIT = 100;
+
+function isCategory(value: string | undefined): value is MangaCategory {
+  return MANGA_CATEGORIES.includes(value as MangaCategory);
+}
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -32,6 +41,45 @@ manga.get("/search", async (c) => {
   } catch (error) {
     console.error("MangaDex search failed", error);
     return c.json({ error: "Unable to search manga right now." }, 502);
+  }
+});
+
+/**
+ * Registered before `/:id`, or Hono would match "browse" as a manga id.
+ */
+manga.get("/browse/:category", async (c) => {
+  const category = c.req.param("category");
+
+  if (!isCategory(category)) {
+    return c.json({ error: "Unknown category." }, 400);
+  }
+
+  const limit = intParam(c.req.query("limit"), DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = intParam(c.req.query("offset"), 0, 10_000);
+
+  try {
+    return c.json(await browseManga(category, { limit, offset }));
+  } catch (error) {
+    console.error("MangaDex browse failed", error);
+    return c.json({ error: "Unable to load manga right now." }, 502);
+  }
+});
+
+manga.get("/:id/chapters", async (c) => {
+  const id = c.req.param("id");
+
+  if (!UUID_PATTERN.test(id)) {
+    return c.json({ error: "Invalid manga id." }, 400);
+  }
+
+  const limit = intParam(c.req.query("limit"), CHAPTER_LIMIT, CHAPTER_LIMIT);
+  const offset = intParam(c.req.query("offset"), 0, 10_000);
+
+  try {
+    return c.json(await getChapters(id, { limit, offset }));
+  } catch (error) {
+    console.error("Failed to fetch chapters", error);
+    return c.json({ error: "Unable to load chapters." }, 502);
   }
 });
 

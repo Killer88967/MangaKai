@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Banner } from "@mangakai/shared";
-import {
-  DISMISSED_COOKIE,
-  serializeDismissed,
-} from "@/lib/dismissed-banners";
+import { DISMISSED_COOKIE, serializeDismissed } from "@/lib/dismissed-banners";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -61,7 +58,9 @@ function BannerRow({
 
         <p className="min-w-0 flex-1 text-sm leading-6">
           <span className="font-semibold">{banner.title}</span>
-          {banner.body && <span className="ml-2 opacity-80">{banner.body}</span>}
+          {banner.body && (
+            <span className="ml-2 opacity-80">{banner.body}</span>
+          )}
         </p>
 
         {banner.linkUrl && (

@@ -1,4 +1,10 @@
-import type { AdminBanner, ApiError } from "@mangakai/shared";
+import type {
+  AdminBanner,
+  AdminStaffPick,
+  ApiError,
+  MangaSummary,
+  Paginated,
+} from "@mangakai/shared";
 
 const API_URL = process.env.API_URL ?? "http://localhost:8787";
 
@@ -90,6 +96,70 @@ export function updateBanner(id: string, payload: Partial<BannerPayload>) {
 
 export function deleteBanner(id: string) {
   return request<null>(`/admin/banners/${id}`, { method: "DELETE" });
+}
+
+/** Matches the admin input accepted by `POST /admin/staff-picks`. */
+export interface StaffPickPayload {
+  mangaId: string;
+  note?: string | null;
+  position?: number;
+  active?: boolean;
+}
+
+export function listStaffPicks() {
+  return request<AdminStaffPick[]>("/admin/staff-picks") as Promise<
+    AdminStaffPick[]
+  >;
+}
+
+export function addStaffPick(payload: StaffPickPayload) {
+  return request<AdminStaffPick>("/admin/staff-picks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }) as Promise<AdminStaffPick>;
+}
+
+export function updateStaffPick(
+  mangaId: string,
+  patch: Partial<Omit<StaffPickPayload, "mangaId">>,
+) {
+  return request<AdminStaffPick>(`/admin/staff-picks/${mangaId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  }) as Promise<AdminStaffPick>;
+}
+
+export function deleteStaffPick(mangaId: string) {
+  return request<null>(`/admin/staff-picks/${mangaId}`, { method: "DELETE" });
+}
+
+/** Returns the whole list, renumbered, so callers can show the new order. */
+export function moveStaffPick(mangaId: string, position: number) {
+  return request<AdminStaffPick[]>(`/admin/staff-picks/${mangaId}/move`, {
+    method: "POST",
+    body: JSON.stringify({ position }),
+  }) as Promise<AdminStaffPick[]>;
+}
+
+export function switchStaffPick(
+  from: string,
+  to: string,
+  note?: string | null,
+) {
+  return request<AdminStaffPick>("/admin/staff-picks/switch", {
+    method: "POST",
+    body: JSON.stringify({ from, to, note }),
+  }) as Promise<AdminStaffPick>;
+}
+
+/**
+ * Public search, used so `picks add` can take a title instead of making
+ * someone hunt down a MangaDex UUID by hand.
+ */
+export function searchManga(query: string) {
+  return request<Paginated<MangaSummary>>(
+    `/api/manga/search?q=${encodeURIComponent(query)}&limit=10`,
+  ) as Promise<Paginated<MangaSummary>>;
 }
 
 export { API_URL };

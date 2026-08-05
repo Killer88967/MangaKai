@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import admin from "./routes/admin";
 import banners from "./routes/banners";
+import chapters from "./routes/chapters";
 import home from "./routes/home";
 import manga from "./routes/manga";
 
@@ -20,6 +21,7 @@ app.get("/", (c) => {
 
 app.route("/api/home", home);
 app.route("/api/manga", manga);
+app.route("/api/chapters", chapters);
 app.route("/api/banners", banners);
 app.route("/admin", admin);
 

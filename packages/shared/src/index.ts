@@ -39,12 +39,72 @@ export interface Manga extends MangaSummary {
   artists: string[];
 }
 
+/** One translated chapter of a manga. */
+export interface Chapter {
+  id: string;
+  /** Chapter number as MangaDex records it — "43.5" is legal. Null for oneshots. */
+  number: string | null;
+  volume: string | null;
+  title: string | null;
+  language: string;
+  pages: number;
+  publishedAt: string;
+  scanlationGroup: string | null;
+  /**
+   * Whether MangaKai can display it. False for chapters hosted elsewhere
+   * (official simulpubs) or pulled by the uploader — the API decides, so
+   * clients never re-derive the rule.
+   */
+  readable: boolean;
+  /** Where to send the reader when `readable` is false. */
+  externalUrl: string | null;
+}
+
+/** Resolved image URLs for one chapter, in reading order. */
+export interface ChapterPages {
+  id: string;
+  pages: string[];
+}
+
+/**
+ * What a client tells us about one page image it fetched.
+ *
+ * MangaDex@Home is a volunteer network that relies on these to spot unhealthy
+ * nodes, and the client is the only party that sees the fetch — images come
+ * straight from the node, not through our API. Clients post this to
+ * `/api/chapters/report` and the API forwards it; they never call MangaDex.
+ */
+export interface ChapterPageReport {
+  /** The full image URL that was fetched, including the scheme. */
+  url: string;
+  success: boolean;
+  /** True when the response's `X-Cache` header started with `HIT`. */
+  cached: boolean;
+  /** Bytes received. */
+  bytes: number;
+  /** Total retrieval time in milliseconds. */
+  duration: number;
+}
+
 export interface Paginated<T> {
   data: T[];
   total: number;
   limit: number;
   offset: number;
 }
+
+/**
+ * The browsable homepage rows. Each maps to a MangaDex sort order in the API —
+ * clients only ever send these names, never an upstream sort field.
+ */
+export const MANGA_CATEGORIES = ["popular", "latest", "recent"] as const;
+export type MangaCategory = (typeof MANGA_CATEGORIES)[number];
+
+export const MANGA_CATEGORY_TITLES: Record<MangaCategory, string> = {
+  popular: "Trending",
+  latest: "Latest Updates",
+  recent: "Recently Added",
+};
 
 export interface ApiError {
   error: string;
@@ -81,6 +141,22 @@ export interface AdminBanner extends Banner {
 export interface StaffPick {
   manga: MangaSummary;
   note: string | null;
+}
+
+/**
+ * What an admin sees: the stored row plus its manga title, without dropping
+ * picks MangaDex cannot resolve — an admin needs to see a broken pick in order
+ * to fix it, where a visitor should simply never be shown one.
+ */
+export interface AdminStaffPick {
+  id: string;
+  mangaId: string;
+  /** Null when MangaDex no longer returns this manga. */
+  title: string | null;
+  note: string | null;
+  position: number;
+  active: boolean;
+  createdAt: string;
 }
 
 /**

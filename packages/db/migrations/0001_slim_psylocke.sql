@@ -1,0 +1,1 @@
+ALTER TABLE "staff_picks" ADD COLUMN "active" boolean DEFAULT true NOT NULL;
