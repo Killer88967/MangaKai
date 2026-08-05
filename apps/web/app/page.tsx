@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { BannerPopup } from "@/components/banner-popup";
 import { HomeSections } from "@/components/home-sections";
 import { MangaSearch } from "@/components/manga-search";
 import { getHomePage } from "@/lib/api";
@@ -28,7 +27,6 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#251447_0%,#0a0910_38%)] px-4 py-12 sm:px-6 lg:px-8">
-      {home && <BannerPopup initialBanners={home.banners} />}
       <MangaSearch>
         {home ? <HomeSections home={home} /> : <HomeError />}
       </MangaSearch>

@@ -1,5 +1,6 @@
 import type {
   ApiError,
+  Banner,
   HomePage,
   Manga,
   MangaSummary,
@@ -32,6 +33,17 @@ export async function searchManga(
     throw new Error(
       await errorMessage(response, "Search failed. Please try again."),
     );
+  }
+
+  return response.json();
+}
+
+/** Banners are site-wide, so the root layout fetches them for every page. */
+export async function getBanners(): Promise<Banner[]> {
+  const response = await fetch(`${API_URL}/api/banners`, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(await errorMessage(response, "Unable to load banners."));
   }
 
   return response.json();

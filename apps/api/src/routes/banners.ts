@@ -22,8 +22,15 @@ bannersRoute.get("/", async (c) => {
  * connect and again whenever an admin changes anything, so a POST from a
  * terminal shows up in an open browser tab without a refresh.
  */
-bannersRoute.get("/stream", (c) =>
-  streamSSE(c, async (stream) => {
+bannersRoute.get("/stream", (c) => {
+  // Compressing an event stream buffers it, so events never reach the client.
+  // `no-transform` is the standards-based signal; the other two cover proxies
+  // that ignore it (nginx honours X-Accel-Buffering).
+  c.header("Cache-Control", "no-cache, no-transform");
+  c.header("Content-Encoding", "identity");
+  c.header("X-Accel-Buffering", "no");
+
+  return streamSSE(c, async (stream) => {
     let open = true;
 
     const send = async () => {
@@ -53,7 +60,7 @@ bannersRoute.get("/stream", (c) =>
       if (!open) break;
       await stream.writeSSE({ event: "ping", data: "" });
     }
-  }),
-);
+  });
+});
 
 export default bannersRoute;

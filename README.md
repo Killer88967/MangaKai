@@ -24,6 +24,7 @@ consistent contract. If MangaDex changes, only `apps/api` and
 | `packages/mangadex` | MangaDex wire format and HTTP calls                |
 | `packages/shared`   | MangaKai's API contract, shared by API and clients |
 | `packages/db`       | Drizzle schema and Postgres client                 |
+| `packages/cli`      | `pnpm banner` — the admin CLI                      |
 
 ## Getting started
 
@@ -55,7 +56,122 @@ pnpm --filter @mangakai/db db:migrate    # apply it
 pnpm --filter @mangakai/db db:studio     # browse the data
 ```
 
+## Banner CLI
+
+The easiest way to manage banners. It reads `ADMIN_TOKEN` from `apps/api/.env`
+automatically, so there is nothing to configure.
+
+```bash
+pnpm banner              # interactive create
+pnpm banner list         # every banner with its status
+pnpm banner edit         # change fields on an existing banner
+pnpm banner publish      # pick a draft and make it live
+pnpm banner unpublish    # hide one without deleting it
+pnpm banner delete       # pick one and delete it
+pnpm banner --help
+```
+
+Every write — create, edit, publish, unpublish, delete — is pushed to open
+browsers over SSE, so the bar updates without anyone reloading.
+
+> **If live updates ever stop working, check `compress: false` in
+> `apps/web/next.config.ts`.** Next gzips proxied responses, and compressing an
+> event stream buffers it — the browser connects and then receives nothing.
+> `curl` will not reproduce it, because it sends no `Accept-Encoding` by
+> default and so gets an uncompressed stream. Test with a real browser.
+
+`pnpm banner` walks you through title, body, style, an optional link button, an
+optional image, optional scheduling, and whether to publish now — then shows a
+review before anything is sent.
+
+```
+┌  MangaKai · new banner
+│
+◆  Title
+│  Server maintenance tonight
+│
+◆  Style
+│  ● Info          sky · shown as "Notice"
+│  ○ Announcement  violet · for launches and news
+│  ○ Warning       amber · shown as "Heads up"
+└
+```
+
+### Editing
+
+`pnpm banner edit` shows the banner's current values, lets you tick only the
+fields you want to touch, pre-fills each prompt with what is there today, and
+reviews the change as `from → to` before saving. Leaving a text field blank
+clears it.
+
+```
+│  Current values 99e327b3-dd75-432b-919b-ae8224ef620d
+│
+│  Title        Edit me
+│  Body         original body
+│  Style        info
+│  Link URL     —
+│  Published    yes
+│
+◆  What do you want to change?
+│  ◼ Title   ◻ Body   ◼ Style   ◻ Link URL   ◻ Published
+│
+│  Changes
+│
+│  Title        Edit me → Edit me v2
+│  Style        info → warning
+│
+◆  Apply these changes?  ● Yes / ○ No
+│
+◇  Saved and pushed to every open tab
+```
+
+Fields you do not tick are left untouched — it sends a partial `PATCH`, not a
+whole replacement.
+
+`edit`, `publish`, `unpublish` and `delete` show a picker when you leave the id
+off. A short id prefix works too — `pnpm banner edit 4117c72a`.
+
+`list` labels each banner **live**, **draft**, **scheduled** or **expired**:
+
+```
+  live      4117c72a  Welcome to MangaKai
+            info
+  scheduled 9733c07c  Scheduled maintenance
+            warning · from 2030-09-01 22:00 until 2030-09-02 02:00
+  draft     d8493678  Not live yet
+            info
+```
+
+### Scripting it
+
+Passing `--title` skips every prompt, which is what you want in a deploy script:
+
+```bash
+pnpm banner new --title "Maintenance" --variant warning \
+  --body "Read-only from 22:00 UTC." --starts 2026-09-01T22:00:00Z
+
+pnpm banner new --title "Draft for later" --draft
+pnpm banner list --json
+```
+
+| Flag        | Notes                                     |
+| ----------- | ----------------------------------------- |
+| `--title`   | Required. 1–120 characters.               |
+| `--body`    | The text after the title.                 |
+| `--variant` | `info`, `announcement` or `warning`.      |
+| `--link`    | URL for the button.                       |
+| `--label`   | Button text. Needs `--link`.              |
+| `--image`   | Small image shown at the left of the bar. |
+| `--starts`  | ISO 8601. Bare numbers are rejected.      |
+| `--ends`    | ISO 8601.                                 |
+| `--draft`   | Save without publishing.                  |
+| `--json`    | With `list`, print raw JSON.              |
+
 ## Admin API
+
+The CLI is a thin wrapper over these routes — reach for them directly when you
+want raw HTTP.
 
 Admin routes are gated by `ADMIN_TOKEN` from `apps/api/.env`. This is a
 placeholder until real user accounts and roles land — the middleware in
@@ -76,7 +192,7 @@ without a refresh.
 | ----------- | ------------------------------------- | -------- | ------- | -------------------------------------------------------------- |
 | `title`     | string, 1–120 chars                   | **yes**  | —       | Trimmed. Empty or >120 is a 400.                               |
 | `body`      | string \| null                        | no       | `null`  | The paragraph under the title. Trimmed, no empty string.       |
-| `imageUrl`  | URL \| null                           | no       | `null`  | Shown as a banner image above the title. Must be a valid URL.  |
+| `imageUrl`  | URL \| null                           | no       | `null`  | Small image at the left of the bar. Must be a valid URL.       |
 | `linkUrl`   | URL \| null                           | no       | `null`  | Turns the call-to-action button on. Must be a valid URL.       |
 | `linkLabel` | string \| null                        | no       | `null`  | Button text. Falls back to `Learn more` when `linkUrl` is set. |
 | `variant`   | `info` \| `announcement` \| `warning` | no       | `info`  | Controls colour and the pill label.                            |
@@ -86,7 +202,7 @@ without a refresh.
 
 The response adds `id`, `createdAt` and `updatedAt`.
 
-How each `variant` renders in the popup:
+How each `variant` renders in the bar:
 
 | `variant`      | Pill label   | Colour |
 | -------------- | ------------ | ------ |
@@ -102,9 +218,14 @@ AND (startsAt is null OR startsAt <= now)
 AND (endsAt   is null OR endsAt   >= now)
 ```
 
-`GET /api/banners` returns only live banners, newest first. The site pops up
-the newest one the visitor has not dismissed; dismissals are stored per browser
-in `localStorage` under `mangakai:dismissed-banners`.
+`GET /api/banners` returns only live banners, newest first. They render as a
+sticky bar across the top of every page — several at once stack vertically,
+newest on top.
+
+Dismissals are stored in the `mangakai_dismissed_banners` cookie rather than
+`localStorage`, so the server can filter them during SSR and the bar is present
+in the initial HTML instead of appearing after hydration and pushing the page
+down. The cookie keeps the 20 most recent ids.
 
 > **Dates must be ISO 8601 strings, not epoch numbers.** A bare number is read
 > as milliseconds, so `1767225600` becomes 1970-01-21 and the banner goes live
