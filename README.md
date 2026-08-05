@@ -522,4 +522,4 @@ curl -X DELETE localhost:8787/admin/staff-picks/<mangaId> -H "authorization: $TO
 # Test
 **Links:**
 
-- Official English Translation [<Pocket Comicks>](https://www.pocketcomics.com/comic/320)
+- Official English Translation [<Pocket Comics>](https://www.pocketcomics.com/comic/320)
