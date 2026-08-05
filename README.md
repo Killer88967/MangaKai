@@ -56,6 +56,126 @@ pnpm --filter @mangakai/db db:migrate    # apply it
 pnpm --filter @mangakai/db db:studio     # browse the data
 ```
 
+## Mobile app
+
+```bash
+pnpm dev:mobile
+```
+
+Scan the QR code with **Expo Go**. No custom dev build is needed — nothing in
+`apps/mobile/src` imports a native module that Expo Go does not already ship.
+
+The app is pinned to **Expo SDK 54** (React Native 0.81, React 19.1) because
+that is the SDK the App Store build of Expo Go supports. Expo Go ships one SDK
+runtime per build, so this pin tracks the store app — moving the SDK ahead of
+Expo Go stops the project opening on a real phone. Do not bump it just because
+a newer SDK exists. Run `npx expo install --check` after touching dependencies
+to confirm they still line up.
+
+### Running it from a Codespace
+
+`pnpm dev:mobile` detects Codespaces and handles this for you, but it is worth
+knowing what it does, because the obvious approaches both fail:
+
+- **LAN mode** (Expo's default) advertises the container's private IP. Your
+  phone has no route to it.
+- **`expo start --tunnel`** fails. It hardcodes Expo's _own_ ngrok account and
+  their `exp.direct` domain (see `NGROK_CONFIG` in the CLI's `AsyncNgrok.js`),
+  and that shared account is saturated: `ERR_NGROK_108`, "limited to 5000
+  simultaneous ngrok agent sessions". Having your own ngrok account does not
+  help here — `--tunnel` will never use it.
+
+So we hand Expo a public URL ourselves via `EXPO_PACKAGER_PROXY_URL`, which
+rewrites every URL Expo advertises — manifest, JS bundle, assets and the HMR
+websocket — to that host instead of a LAN IP.
+`apps/mobile/scripts/start-expo.sh` finds one, in this order:
+
+1. `EXPO_PACKAGER_PROXY_URL` already exported — used as-is.
+2. **A running ngrok agent** forwarding port `8081`. Found automatically by
+   querying ngrok's local API on `127.0.0.1:4040`, so there is no URL to
+   copy-paste. **Preferred:** port `8081` stays private.
+3. **Codespaces port forwarding.** The fallback when no tunnel is running. This
+   flips port `8081` to **public**, because Expo Go sends no GitHub credentials
+   and a private forward answers it with a login page instead of the manifest.
+
+Either way the script prints the URL in text as well, for **Enter URL manually**
+in Expo Go if the QR will not scan.
+
+### The ngrok route
+
+Install the agent (no sudo needed — `~/.local/bin` is already on `PATH`):
+
+```bash
+curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | tar xz -C ~/.local/bin
+ngrok config add-authtoken <your-token>
+```
+
+Then run the tunnel in its own terminal and start Metro normally:
+
+```bash
+ngrok http 8081 --url=https://<your-static-domain>.ngrok-free.dev   # terminal 1
+pnpm dev:mobile                                                     # terminal 2
+```
+
+A free ngrok static domain keeps the URL stable across restarts. The agent
+binary does not survive a Codespace rebuild (re-run the curl), but the
+authtoken does — `~/.config` is persisted.
+
+ngrok's free tier serves a browser-warning interstitial on requests that look
+like a browser. Verified that this does **not** affect Expo Go: the manifest
+comes back as `application/expo+json` and the full bundle downloads. If you ever
+do hit it, the bypass is an `ngrok-skip-browser-warning` header, which Expo Go
+does not send.
+
+### Live banners
+
+The mobile banner bar subscribes to `/api/banners/stream`, so `pnpm banner new`
+shows up on the phone without a refresh — same as the web app.
+
+React Native has no `EventSource`, and the built-in `fetch` buffers the whole
+response, so it never resolves on an endpoint that stays open. `expo/fetch` is
+the WinterCG fetch that exposes `response.body` as a `ReadableStream`, so
+`src/hooks/use-live-banners.ts` reads the stream and parses the frames itself.
+No extra dependency.
+
+Unlike the web app there is no proxy in the way, so nothing here needs the
+`compress: false` workaround that `apps/web` does. GitHub's port forwarding
+passes the stream through unbuffered — verified with timestamped frames.
+
+### Things to expect in a Codespace
+
+- `An unknown error occurred while installing React Native DevTools`
+  (`libgtk-3.so.0` missing) on every start. Harmless. That is the desktop
+  debugger GUI, which cannot run in a headless container either way. Only the
+  `j` shortcut is affected.
+- If you fall back to the Codespaces route, port `8081` is **public** — anyone
+  with the URL can load your dev bundle while the server runs. Stop Metro when
+  you are done, or set the port back to private in the **Ports** panel.
+
+### Reaching the API from your phone
+
+`localhost` means the phone itself, so the app needs a public API URL. The
+tunnel cannot carry it — a free ngrok account gets one domain, and that one is
+already serving Metro. So the API goes over Codespaces port forwarding instead.
+One-time, and the setting sticks:
+
+```bash
+gh codespace ports visibility 8787:public --codespace "$CODESPACE_NAME"
+```
+
+`scripts/start-expo.sh` then exports the matching URL:
+
+```
+EXPO_PUBLIC_API_URL=https://<codespace-name>-8787.app.github.dev
+```
+
+`src/lib/api.ts` reads it. Expo inlines `EXPO_PUBLIC_*` at build time, so
+**changing it requires restarting Metro** — reloading the app is not enough.
+Override it in `apps/mobile/.env` when you are not in a Codespace.
+
+Note this exposes `/admin/*` to the internet, guarded only by `ADMIN_TOKEN`.
+Use a real secret in `apps/api/.env` before doing it.
+
 ## Banner CLI
 
 The easiest way to manage banners. It reads `ADMIN_TOKEN` from `apps/api/.env`
@@ -397,3 +517,9 @@ curl -X DELETE localhost:8787/admin/staff-picks/<mangaId> -H "authorization: $TO
 | `GET /api/manga/:id`       | Full manga detail                               |
 | `GET /api/banners`         | Currently live banners                          |
 | `GET /api/banners/stream`  | SSE feed of banner changes                      |
+
+
+# Test
+**Links:**
+
+- Official English Translation [<Pocket Comicks>](https://www.pocketcomics.com/comic/320)
