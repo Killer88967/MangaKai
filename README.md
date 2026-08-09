@@ -199,6 +199,65 @@ Override it in `apps/mobile/.env` when you are not in a Codespace.
 Note this exposes `/admin/*` to the internet, guarded only by `ADMIN_TOKEN`.
 Use a real secret in `apps/api/.env` before doing it.
 
+## Accounts
+
+MangaKai owns its users outright — there is no third-party identity provider.
+Email and password, hashed with scrypt from `node:crypto`, and sessions stored
+in Postgres.
+
+| Endpoint                  | Does                          |
+| ------------------------- | ----------------------------- |
+| `POST /api/auth/register` | Create an account and sign in |
+| `POST /api/auth/login`    | Sign in                       |
+| `POST /api/auth/logout`   | Revoke the current session    |
+| `GET /api/auth/me`        | The signed-in user, or 401    |
+
+They live under `/api/auth`, not `/auth`, because the web app reaches the API
+through a rewrite that only forwards `/api/*`. Outside it the browser would be
+making a cross-origin request and the session cookie would never be sent.
+
+### Two clients, one set of routes
+
+`register` and `login` set an httpOnly cookie **and** return the token in the
+body. Each client uses the half it needs:
+
+- **Web** keeps the cookie. Page JavaScript cannot read it, so an XSS bug
+  cannot steal the session, and server components can read it during SSR — the
+  header renders signed-in in the initial HTML rather than flipping after
+  hydration.
+- **Mobile** stores the token in `expo-secure-store` (iOS keychain / Android
+  keystore) and sends `Authorization: Bearer`.
+
+`apps/api/src/lib/session-cookie.ts` reads either, so no route needs
+per-client handling.
+
+### Sessions are rows, not signed tokens
+
+A `sessions` row holds a **SHA-256 of the token**, never the token, so a leaked
+database dump contains nothing that grants access. Deleting the row logs that
+device out immediately — the reason for not using JWTs, which stay valid until
+they expire no matter what the server thinks.
+
+Sessions last 30 days. Expired rows are pruned on that user's next login, which
+is the one moment their id is already at hand.
+
+### Things that are deliberate
+
+- **Login never says which half was wrong.** "Invalid email or password" covers
+  both, and the no-such-user path still runs a real scrypt verify against a
+  decoy hash — otherwise the response time reveals which addresses are
+  registered. Measured: 39ms versus 36ms.
+- **Emails are lowercased and trimmed before storage**, so `Ernie@x.com` and
+  `ernie@x.com` cannot become two accounts. Registration relies on the unique
+  index rather than a pre-check, which two simultaneous requests can both pass.
+- **`?next=` only accepts same-site paths.** Without that check the login page
+  is an open redirect, and `//evil.com` is a URL, so testing for a leading `/`
+  alone is not enough.
+- **scrypt parameters are stored inside each hash.** Raising the work factor
+  later keeps every existing password working.
+
+`ADMIN_TOKEN` still guards `/admin/*`; roles are not built yet.
+
 ## Banner CLI
 
 The easiest way to manage banners. It reads `ADMIN_TOKEN` from `apps/api/.env`
@@ -591,6 +650,72 @@ curl -X POST localhost:8787/admin/staff-picks \
 
 curl -X DELETE localhost:8787/admin/staff-picks/<mangaId> -H "authorization: $TOKEN"
 ```
+
+## The reader
+
+Page images are loaded with a plain `<img src>` pointed straight at the
+MangaDex@Home node — **not** fetched first.
+
+MangaDex@Home hotlink-protects its nodes. A request that looks like a browser
+_and_ carries an `Origin` header from a domain it does not allowlist gets a
+`404`, and a 404 has no CORS headers, so the browser reports it as:
+
+```
+Access to fetch at 'https://….mangadex.network/data/…'
+has been blocked by CORS policy:
+No 'Access-Control-Allow-Origin' header is present on the requested resource.
+```
+
+Which sends you looking for a CORS bug that is not there. Measured against one
+node:
+
+| Request                               | Result |
+| ------------------------------------- | ------ |
+| Chrome UA + `Origin: localhost:3000`  | `200`  |
+| Chrome UA + `Origin: <anything-else>` | `404`  |
+| Chrome UA + no `Origin` header        | `200`  |
+| curl UA + `Origin: <anything-else>`   | `200`  |
+
+`localhost` is allowlisted, so this works perfectly in local development and
+fails the moment the site is served from any real domain — including a
+Codespaces forwarded port. `fetch()` always sends `Origin`; `<img src>` sends
+none.
+
+**Consequence:** neither client reports retrievals to MangaDex@Home any more.
+Reporting needs the byte count and duration of the fetch, and only code that
+performs the fetch can measure those. Expo never could (`expo-image` exposes no
+metrics), and the web app now cannot either. The alternative is proxying every
+page image through the API, which would put a manga site's entire image
+bandwidth through one server. `POST /api/chapters/report` still exists and
+still works, unused, if that trade is ever worth making.
+
+An `<img>` error carries no status code, so an expired host and a broken page
+look identical. Both readers treat a failure as "ask for a fresh host" and cap
+it at `MAX_REFRESHES = 2`, or the two would feed each other forever.
+
+## Titles
+
+MangaDex's `title` is the work's **main** title, which is usually the romanised
+original rather than a translation:
+
+```
+{"zh-ro": "Qǐng Qīfu Wǒ ba, Èyì Xiǎojiě!"}   ← attributes.title
+{"en":    "Please Bully Me, Miss Villainess!"} ← buried in attributes.altTitles
+```
+
+So `pickTitle` in `apps/api/src/services/manga.ts` looks for a real English
+title first — `title.en`, then `altTitles` — and only falls back to the
+romanised original when no English title exists anywhere. Across 120 manga from
+the homepage rows this changed **81** of them.
+
+It is easy to miss, because Japanese romanisations are frequently the name
+English readers already use — "Berserk", "One Piece" — so the bug hides until a
+Chinese or Korean series appears. It was also hiding plainer cases: "Sono
+Bisque Doll wa Koi o Suru" is "My Dress-Up Darling".
+
+The romanised original is not discarded; it moves into `altTitles`, since it is
+a name someone may well search for. Search is unaffected either way — MangaDex
+matches alt titles server-side, so both names find the series.
 
 ## Public API
 
