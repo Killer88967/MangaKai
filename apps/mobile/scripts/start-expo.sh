@@ -30,6 +30,37 @@ if [[ -z "${EXPO_PUBLIC_API_URL:-}" && -n "${CODESPACE_NAME:-}" ]]; then
 fi
 echo "API base URL: ${EXPO_PUBLIC_API_URL:-http://localhost:${API_PORT}}"
 
+# Make a forwarded port reachable by the phone.
+#
+# Neither Expo Go nor the app sends GitHub credentials, so a private forward
+# answers them with a sign-in page — HTML, which surfaces in the app as
+# "JSON Parse error: Unexpected character: <".
+#
+# This is not a one-time setting. `gh` can only change a port that is currently
+# forwarded, and Codespaces forwards a port fresh (private) whenever something
+# starts listening on it — so the API reverts to private every time it restarts.
+# Hence the retry loop, in the background: the port may not exist yet.
+publish_port() {
+  local port="$1" label="$2"
+
+  (
+    for _ in $(seq 1 20); do
+      if gh codespace ports visibility "${port}:public" \
+        --codespace "$CODESPACE_NAME" >/dev/null 2>&1; then
+        exit 0
+      fi
+      sleep 2
+    done
+    echo "Could not make port ${port} (${label}) public. Set it to Public in the Ports panel."
+  ) &
+}
+
+# The API always goes over Codespaces forwarding, even when Metro is on ngrok —
+# a free ngrok account gets one domain and Metro is already using it.
+if [[ -n "${CODESPACE_NAME:-}" ]]; then
+  publish_port "$API_PORT" "API"
+fi
+
 # ngrok publishes its live tunnels on a local API. Ask it rather than making
 # anyone paste a URL that changes every restart.
 discover_ngrok_url() {
@@ -71,19 +102,7 @@ elif [[ -n "${CODESPACE_NAME:-}" ]]; then
   HOST="${CODESPACE_NAME}-${PORT}.${DOMAIN}"
   export EXPO_PACKAGER_PROXY_URL="https://${HOST}"
 
-  # Expo Go sends no GitHub credentials, so a private forward answers it with a
-  # login page rather than the manifest. The port only exists once Metro is
-  # listening, so this retries in the background instead of racing the server.
-  (
-    for _ in $(seq 1 20); do
-      if gh codespace ports visibility "${PORT}:public" \
-        --codespace "$CODESPACE_NAME" >/dev/null 2>&1; then
-        exit 0
-      fi
-      sleep 2
-    done
-    echo "Could not make port ${PORT} public. Set it to Public in the Ports panel."
-  ) &
+  publish_port "$PORT" "Metro"
 
   echo "Codespaces detected (no ngrok tunnel running)."
   echo "Open this in Expo Go (Enter URL manually):"

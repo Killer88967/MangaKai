@@ -25,7 +25,17 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
       {/* The tab group draws its own chrome, so it must not get a header. */}
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          /**
+           * Chevron only, no label. iOS labels the back button with the
+           * previous screen's title, and a route group has none — so it fell
+           * back to the folder name and read "< (tabs)".
+           */
+          headerBackButtonDisplayMode: "minimal",
+        }}
+      />
     </ThemeProvider>
   );
 }

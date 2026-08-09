@@ -31,18 +31,27 @@ consistent contract. If MangaDex changes, only `apps/api` and
 ```bash
 pnpm install
 
-# Postgres for MangaKai-owned data
-docker run -d --name mangakai-postgres \
-  -e POSTGRES_USER=mangakai -e POSTGRES_PASSWORD=mangakai -e POSTGRES_DB=mangakai \
-  -p 5432:5432 postgres:17-alpine
-
 cp apps/api/.env.example apps/api/.env
 cp packages/db/.env.example packages/db/.env
 
-pnpm --filter @mangakai/db db:migrate
+pnpm db:up      # Postgres for MangaKai-owned data; creates the container first time
+pnpm db:migrate
 
 pnpm dev
 ```
+
+`pnpm dev` and `pnpm dev:api` run `db:up` themselves, so you rarely need it
+directly. It is worth knowing it exists because Codespaces stops containers
+when it suspends: come back to a paused Codespace and the database is down, and
+the API reports it as a failed Drizzle query with `ECONNREFUSED` buried at the
+bottom of the stack.
+
+| Command           | Does                                             |
+| ----------------- | ------------------------------------------------ |
+| `pnpm db:up`      | Start Postgres, waiting until it accepts queries |
+| `pnpm db:down`    | Stop it; the data volume is kept                 |
+| `pnpm db:migrate` | Apply pending migrations                         |
+| `pnpm db:studio`  | Drizzle Studio                                   |
 
 The API listens on `http://localhost:8787`, the site on
 `http://localhost:3000`. The site proxies `/api/*` to the API via a rewrite in
@@ -156,14 +165,28 @@ passes the stream through unbuffered — verified with timestamped frames.
 
 `localhost` means the phone itself, so the app needs a public API URL. The
 tunnel cannot carry it — a free ngrok account gets one domain, and that one is
-already serving Metro. So the API goes over Codespaces port forwarding instead.
-One-time, and the setting sticks:
+already serving Metro. So the API goes over Codespaces port forwarding instead,
+and port `8787` has to be **public**.
+
+`scripts/start-expo.sh` does this for you. It is not a one-time setting, which
+is the trap: `gh` can only change a port that is currently forwarded, and
+Codespaces forwards a port fresh — private — whenever something starts
+listening on it. So the API reverts to private every time you restart it, and
+the app then receives GitHub's sign-in page instead of JSON:
+
+```
+Could not load MangaKai
+JSON Parse error: Unexpected character: <
+```
+
+That `<` is the first character of `<!doctype html>`. If you see it, the API is
+private (or not running). To fix it by hand:
 
 ```bash
 gh codespace ports visibility 8787:public --codespace "$CODESPACE_NAME"
 ```
 
-`scripts/start-expo.sh` then exports the matching URL:
+`scripts/start-expo.sh` also exports the matching URL:
 
 ```
 EXPO_PUBLIC_API_URL=https://<codespace-name>-8787.app.github.dev

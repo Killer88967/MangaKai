@@ -3,13 +3,20 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
-    "dev:mobile": "pnpm --filter mobile run start",
+    "dev": "pnpm db:up && concurrently \"ngrok http 8081\" \"turbo run dev\"",
+    "dev:api": "pnpm db:up && pnpm --filter @mangakai/api dev",
+    "dev:web": "pnpm --filter web run dev",
+    "dev:mobile": "concurrently \"ngrok http 8081\" \"pnpm --filter mobile run start\"",
+    "db:up": "./scripts/db.sh up",
+    "db:down": "./scripts/db.sh down",
+    "db:migrate": "pnpm --filter @mangakai/db db:migrate",
+    "db:studio": "pnpm --filter @mangakai/db db:studio",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "banner": "pnpm --filter @mangakai/cli run cli",
-    "picks": "pnpm --filter @mangakai/cli run picks"
+    "picks": "pnpm --filter @mangakai/cli run picks",
+    "ports": "pnpm --filter @mangakai/cli run ports"
   },
   "devDependencies": {
     "prettier": "3.7.4",
