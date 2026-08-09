@@ -7,6 +7,7 @@
     "dev:api": "pnpm db:up && pnpm --filter @mangakai/api dev",
     "dev:web": "pnpm --filter web run dev",
     "dev:mobile": "concurrently \"ngrok http 8081\" \"pnpm --filter mobile run start\"",
+    "dev:apps": "concurrently \"pnpm dev:web\" \"pnpm dev:mobile\"",
     "db:up": "./scripts/db.sh up",
     "db:down": "./scripts/db.sh down",
     "db:migrate": "pnpm --filter @mangakai/db db:migrate",
