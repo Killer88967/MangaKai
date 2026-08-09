@@ -137,6 +137,34 @@ export interface AdminBanner extends Banner {
   updatedAt: string;
 }
 
+/**
+ * A MangaKai account.
+ *
+ * Never carries the password hash — this is the shape that goes over the wire
+ * and into both clients, so there is nothing here that must not be shown.
+ */
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  createdAt: string;
+}
+
+/**
+ * What `register` and `login` return.
+ *
+ * The API sets an httpOnly cookie *and* returns the token, because the two
+ * clients need different things: the browser uses the cookie it cannot read,
+ * and the phone stores `token` itself and sends it as a bearer. Each ignores
+ * the half it does not need.
+ */
+export interface AuthResponse {
+  user: User;
+  token: string;
+  /** When the session stops working, so a client can pre-emptively re-auth. */
+  expiresAt: string;
+}
+
 /** A MangaKai editorial pick, hydrated with the manga from MangaDex. */
 export interface StaffPick {
   manga: MangaSummary;

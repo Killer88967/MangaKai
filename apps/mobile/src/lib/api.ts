@@ -1,5 +1,6 @@
 import type {
   ApiError,
+  AuthResponse,
   Chapter,
   ChapterPages,
   HomePage,
@@ -7,6 +8,7 @@ import type {
   MangaCategory,
   MangaSummary,
   Paginated,
+  User,
 } from "@mangakai/shared";
 
 /**
@@ -123,4 +125,67 @@ export async function getChapterPages(
   }
 
   return response.json();
+}
+
+/* ------------------------------------------------------------------ *
+ * Accounts.
+ *
+ * The phone has no cookie jar worth relying on, so it holds the session token
+ * itself (see `auth-storage.ts`) and sends it as a bearer. The API accepts
+ * either that or a cookie, so these hit exactly the same routes the web app
+ * does.
+ * ------------------------------------------------------------------ */
+
+async function authRequest(
+  path: "register" | "login",
+  body: Record<string, string>,
+): Promise<AuthResponse> {
+  const response = await fetch(`${API_URL}/api/auth/${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await errorMessage(response, "Something went wrong. Try again."),
+    );
+  }
+
+  return response.json();
+}
+
+export function register(input: {
+  email: string;
+  password: string;
+  displayName: string;
+}): Promise<AuthResponse> {
+  return authRequest("register", input);
+}
+
+export function login(input: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  return authRequest("login", input);
+}
+
+/** The user behind a stored token, or null when it has expired or been revoked. */
+export async function getMe(token: string): Promise<User | null> {
+  const response = await fetch(`${API_URL}/api/auth/me`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  return response.ok ? response.json() : null;
+}
+
+/**
+ * Revokes the session server-side. Failures are the caller's to ignore — the
+ * local token is cleared either way, because the user asked to sign out.
+ */
+export async function logout(token: string): Promise<void> {
+  await fetch(`${API_URL}/api/auth/logout`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+  });
 }

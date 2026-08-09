@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { BannerBar } from "@/components/banner-bar";
+import { SiteHeader } from "@/components/site-header";
 import { getBanners } from "@/lib/api";
 import { DISMISSED_COOKIE, parseDismissed } from "@/lib/dismissed-banners";
 import "./globals.css";
@@ -27,6 +28,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           )}
           dismissedIds={dismissed}
         />
+        <SiteHeader />
         {children}
       </body>
     </html>

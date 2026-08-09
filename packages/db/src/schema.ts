@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   pgTable,
   text,
@@ -13,6 +14,51 @@ import type { BannerVariant } from "@mangakai/shared";
  * authors belong to MangaDex and are fetched live — where we need to point at
  * one, we store its MangaDex UUID and nothing else.
  */
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /**
+   * Stored already lowercased and trimmed. The unique index applies to what is
+   * stored, so normalising has to happen before the insert or `A@b.com` and
+   * `a@b.com` become two accounts.
+   */
+  email: text("email").notNull().unique(),
+  /** scrypt, with its parameters embedded — see `apps/api/src/lib/password.ts`. */
+  passwordHash: text("password_hash").notNull(),
+  displayName: text("display_name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * One row per logged-in device.
+ *
+ * We store a SHA-256 of the session token, never the token itself, so a leaked
+ * database dump does not hand over live sessions. Deleting a row logs that
+ * device out immediately — the reason for keeping sessions here rather than
+ * signing stateless tokens.
+ */
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The unique index on token_hash covers request authentication. This one
+    // covers the other direction: "sign out everywhere" and pruning a user's
+    // expired rows, which look up by user instead.
+    index("sessions_user_id_idx").on(table.userId),
+  ],
+);
 
 export const banners = pgTable("banners", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -49,6 +95,10 @@ export const staffPicks = pgTable("staff_picks", {
     .defaultNow(),
 });
 
+export type UserRow = typeof users.$inferSelect;
+export type NewUserRow = typeof users.$inferInsert;
+export type SessionRow = typeof sessions.$inferSelect;
+export type NewSessionRow = typeof sessions.$inferInsert;
 export type BannerRow = typeof banners.$inferSelect;
 export type NewBannerRow = typeof banners.$inferInsert;
 export type StaffPickRow = typeof staffPicks.$inferSelect;

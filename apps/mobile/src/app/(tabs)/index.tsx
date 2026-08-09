@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AccountBar } from "@/components/account-bar";
 import { BannerBar } from "@/components/banner-bar";
 import { Hero } from "@/components/hero";
 import { SectionRow } from "@/components/section-row";
@@ -76,6 +77,8 @@ export default function HomeScreen() {
           />
         }
       >
+        <AccountBar />
+
         <BannerBar initialBanners={data.banners} />
 
         {error && (
