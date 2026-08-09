@@ -58,18 +58,59 @@ function toTags(manga: MangaDexManga): MangaTag[] {
   }));
 }
 
-function toAltTitles(manga: MangaDexManga): string[] {
-  const titles = (manga.attributes.altTitles ?? []).flatMap((title) =>
-    Object.values(title),
-  );
+/**
+ * The title to show an English-reading visitor.
+ *
+ * MangaDex's `title` is the work's main title, which is usually the *romanised
+ * original* rather than a translation — `{"zh-ro": "Qǐng Qīfu Wǒ ba, Èyì
+ * Xiǎojiě!"}` — and the English title is filed away in `altTitles`. For
+ * Japanese series the romanisation is often the same string readers know
+ * ("Berserk", "One Piece"), which is why this looks correct until a Chinese or
+ * Korean series shows up.
+ *
+ * So: a real English title first, wherever it is stored, and only then fall
+ * back to the romanised original — a title someone cannot read beats no title,
+ * but it is the last resort, not the default.
+ */
+function pickTitle(manga: MangaDexManga): string {
+  const { title, altTitles, originalLanguage } = manga.attributes;
 
-  return [...new Set(titles)];
+  if (title.en) return title.en;
+
+  const english = (altTitles ?? []).find((alt) => alt.en)?.en;
+
+  if (english) return english;
+
+  return (
+    title[`${originalLanguage}-ro`] ??
+    title[originalLanguage] ??
+    Object.values(title)[0] ??
+    "Untitled"
+  );
+}
+
+/**
+ * Every other name the work goes by, the chosen title removed.
+ *
+ * `attributes.title` is included deliberately: once an English alt title is
+ * promoted, the romanised original would otherwise disappear from the app
+ * entirely, and it is the name a reader may well have searched for.
+ */
+function toAltTitles(manga: MangaDexManga, chosen: string): string[] {
+  const titles = [
+    ...Object.values(manga.attributes.title),
+    ...(manga.attributes.altTitles ?? []).flatMap((title) =>
+      Object.values(title),
+    ),
+  ];
+
+  return [...new Set(titles)].filter((title) => title !== chosen);
 }
 
 function toSummary(manga: MangaDexManga): MangaSummary {
   return {
     id: manga.id,
-    title: localized(manga.attributes.title) || "Untitled",
+    title: pickTitle(manga),
     description: localized(manga.attributes.description),
     cover: toCover(manga),
     status: manga.attributes.status,
@@ -81,9 +122,11 @@ function toSummary(manga: MangaDexManga): MangaSummary {
 }
 
 function toManga(manga: MangaDexManga): Manga {
+  const summary = toSummary(manga);
+
   return {
-    ...toSummary(manga),
-    altTitles: toAltTitles(manga),
+    ...summary,
+    altTitles: toAltTitles(manga, summary.title),
     tags: toTags(manga),
     authors: relationshipNames(manga, "author"),
     artists: relationshipNames(manga, "artist"),
