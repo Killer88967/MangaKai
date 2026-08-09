@@ -11,6 +11,15 @@ interface ReaderProps {
   heading: string;
 }
 
+/**
+ * How many times a chapter will ask MangaDex for a fresh host before giving up.
+ *
+ * An `<img>` error carries no status code, so a genuinely broken page looks
+ * exactly like an expired host. Without a ceiling the two would feed each
+ * other: re-resolve, fail, re-resolve, forever.
+ */
+const MAX_REFRESHES = 2;
+
 export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
   const [pages, setPages] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +57,13 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
   const handleExpired = useCallback(() => {
     if (resolving.current) return;
 
-    resolving.current = true;
-    setAttempt((value) => value + 1);
+    setAttempt((value) => {
+      if (value >= MAX_REFRESHES) return value;
+
+      resolving.current = true;
+
+      return value + 1;
+    });
   }, []);
 
   const backHref = mangaId ? `/manga/${mangaId}` : "/";

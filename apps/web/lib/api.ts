@@ -2,7 +2,6 @@ import type {
   ApiError,
   Banner,
   Chapter,
-  ChapterPageReport,
   ChapterPages,
   HomePage,
   Manga,
@@ -116,21 +115,4 @@ export async function getChapterPages(
   }
 
   return response.json();
-}
-
-/**
- * Tells MangaDex@Home how a page fetch went, via our API.
- *
- * Fire and forget: the reader must never stall or error because a health
- * report failed.
- */
-export function reportPageLoad(report: ChapterPageReport): void {
-  void fetch("/api/chapters/report", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(report),
-    keepalive: true,
-  }).catch(() => {
-    // Reporting is best effort; a dropped report is not the reader's problem.
-  });
 }

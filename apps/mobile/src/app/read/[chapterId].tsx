@@ -15,6 +15,9 @@ import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { getChapterPages } from "@/lib/api";
 
+/** How many times a chapter asks for a fresh host before giving up. */
+const MAX_REFRESHES = 2;
+
 /**
  * Manga pages are usually taller than they are wide, so a page occupies
  * roughly this much height before its real size is known. Getting the guess
@@ -100,8 +103,16 @@ export default function ReaderScreen() {
   const handlePageError = useCallback(() => {
     if (resolving.current) return;
 
-    resolving.current = true;
-    setAttempt((value) => value + 1);
+    setAttempt((value) => {
+      // An image error carries no status code, so a genuinely broken page is
+      // indistinguishable from an expired host. Without this ceiling the two
+      // feed each other: re-resolve, fail, re-resolve, forever.
+      if (value >= MAX_REFRESHES) return value;
+
+      resolving.current = true;
+
+      return value + 1;
+    });
   }, []);
 
   const header = (
