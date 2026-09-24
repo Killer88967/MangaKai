@@ -1,11 +1,8 @@
-const SHELL_CACHE = "mangakai-v4";
+const SHELL_CACHE = "mangakai-v5";
 const CHAPTER_CACHE = "mangakai-chapters-v1";
 
 const PRECACHE = [
-  "/",
-  "/offline",
-  "/offline-reader",
-  "/downloads",
+  "/offline.html",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
@@ -53,25 +50,9 @@ self.addEventListener("fetch", (event) => {
         try {
           return await fetch(request);
         } catch {
-          if (url.pathname === "/offline-reader") {
-            const reader = await caches.match("/offline-reader");
-
-            if (reader) return reader;
-          }
-
-          if (url.pathname === "/downloads") {
-            const downloads = await caches.match("/downloads");
-
-            if (downloads) return downloads;
-          }
-
-          const offline = await caches.match("/offline");
+          const offline = await caches.match("/offline.html");
 
           if (offline) return offline;
-
-          const home = await caches.match("/");
-
-          if (home) return home;
 
           return new Response("MangaKai is offline.", {
             status: 503,
