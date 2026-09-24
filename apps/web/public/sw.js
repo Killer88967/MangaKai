@@ -1,4 +1,5 @@
-const CACHE_NAME = "mangakai-v2";
+const SHELL_CACHE = "mangakai-v3";
+const CHAPTER_CACHE = "mangakai-chapters-v1";
 
 const PRECACHE = [
   "/offline",
@@ -10,7 +11,7 @@ const PRECACHE = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)),
+    caches.open(SHELL_CACHE).then((cache) => cache.addAll(PRECACHE)),
   );
 
   self.skipWaiting();
@@ -18,15 +19,18 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key)),
-        ),
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter(
+            (key) =>
+              key.startsWith("mangakai-v") &&
+              key !== SHELL_CACHE &&
+              key !== CHAPTER_CACHE,
+          )
+          .map((key) => caches.delete(key)),
       ),
+    ),
   );
 
   self.clients.claim();
@@ -39,11 +43,25 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
 
-  // Don't cache API requests yet.
+  // API stays network-only.
   if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/offline")));
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cache = await caches.open(SHELL_CACHE);
+
+        if (url.pathname === "/offline-reader") {
+          return cache.match("/offline-reader");
+        }
+
+        if (url.pathname === "/offline") {
+          return cache.match("/offline");
+        }
+
+        return cache.match("/offline");
+      }),
+    );
 
     return;
   }
@@ -59,7 +77,7 @@ self.addEventListener("fetch", (event) => {
         return fetch(request).then((response) => {
           const copy = response.clone();
 
-          caches.open(CACHE_NAME).then((cache) => {
+          caches.open(SHELL_CACHE).then((cache) => {
             cache.put(request, copy);
           });
 
