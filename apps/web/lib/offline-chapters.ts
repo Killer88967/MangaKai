@@ -244,11 +244,19 @@ export async function deleteDownloadedChapter(
 
 /**
  * Removes every downloaded chapter belonging to one manga.
+ *
+ * Chapters downloaded before series metadata existed may not have a manga id.
+ * `getDownloadedManga()` gives those a synthetic `unknown:<chapterId>` key, so
+ * handle that key here as well rather than leaving old downloads undeletable.
  */
 export async function deleteDownloadedManga(mangaId: string): Promise<void> {
-  const chapters = readMetadata().filter(
-    (chapter) => chapter.mangaId === mangaId,
-  );
+  const chapters = readMetadata().filter((chapter) => {
+    if (chapter.mangaId === mangaId) return true;
+
+    return (
+      chapter.mangaId === null && mangaId === `unknown:${chapter.chapterId}`
+    );
+  });
 
   await Promise.all(
     chapters.map((chapter) => deleteDownloadedChapter(chapter.chapterId)),
