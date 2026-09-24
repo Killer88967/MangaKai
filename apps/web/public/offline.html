@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=auto"
+    />
+    <meta name="theme-color" content="#0a0910" />
+
+    <title>MangaKai Offline</title>
+
+    <style>
+      :root {
+        color-scheme: dark;
+        background: #0a0910;
+        color: #f4f4f5;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #0a0910;
+        color: #f4f4f5;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .container {
+        width: min(100% - 32px, 800px);
+        margin: 0 auto;
+        padding: 48px 0;
+      }
+
+      .brand {
+        color: #a78bfa;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 12px 0 0;
+        font-size: 36px;
+      }
+
+      .muted {
+        color: #a1a1aa;
+      }
+
+      .empty,
+      .chapter {
+        margin-top: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .empty {
+        padding: 32px;
+        text-align: center;
+      }
+
+      .chapter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px;
+      }
+
+      .chapter-title {
+        overflow: hidden;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .chapter-meta {
+        margin-top: 6px;
+        color: #71717a;
+        font-size: 13px;
+      }
+
+      .read {
+        flex-shrink: 0;
+        color: #c4b5fd;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .reader-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: #0a0910;
+      }
+
+      .reader-title {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .offline {
+        color: #34d399;
+        font-size: 12px;
+      }
+
+      .page {
+        display: block;
+        width: 100%;
+        max-width: 768px;
+        height: auto;
+        margin: 0 auto;
+      }
+
+      .end {
+        padding: 40px 16px;
+        color: #71717a;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+
+    <script>
+      const CACHE_NAME = "mangakai-chapters-v1";
+      const METADATA_KEY = "mangakai-downloaded-chapters-v1";
+
+      function getChapters() {
+        try {
+          return JSON.parse(localStorage.getItem(METADATA_KEY) || "[]");
+        } catch {
+          return [];
+        }
+      }
+
+      async function showLibrary() {
+        const app = document.getElementById("app");
+        const chapters = getChapters();
+
+        app.innerHTML = `
+          <main class="container">
+            <div class="brand">MangaKai</div>
+            <h1>You're offline</h1>
+            <p class="muted">
+              You can still read chapters you downloaded earlier.
+            </p>
+
+            <div id="chapters"></div>
+          </main>
+        `;
+
+        const list = document.getElementById("chapters");
+
+        if (chapters.length === 0) {
+          list.innerHTML = `
+            <div class="empty">
+              <p>No downloaded chapters.</p>
+              <p class="muted">
+                Download a chapter while you're online and it will appear here.
+              </p>
+            </div>
+          `;
+
+          return;
+        }
+
+        for (const chapter of chapters) {
+          const item = document.createElement("a");
+
+          item.className = "chapter";
+          item.href =
+            "/offline.html?chapter=" +
+            encodeURIComponent(chapter.chapterId);
+
+          item.innerHTML = `
+            <div style="min-width:0">
+              <div class="chapter-title"></div>
+              <div class="chapter-meta">
+                ${chapter.pageCount} pages
+              </div>
+            </div>
+
+            <span class="read">Read →</span>
+          `;
+
+          item.querySelector(".chapter-title").textContent =
+            chapter.heading;
+
+          list.appendChild(item);
+        }
+      }
+
+      async function showReader(chapterId) {
+        const app = document.getElementById("app");
+        const chapters = getChapters();
+
+        const chapter = chapters.find(
+          (item) => item.chapterId === chapterId,
+        );
+
+        app.innerHTML = `
+          <header class="reader-header">
+            <a href="/offline.html">← Downloads</a>
+            <div class="reader-title"></div>
+            <span class="offline">Offline</span>
+          </header>
+
+          <main id="pages">
+            <p class="end">Loading downloaded chapter…</p>
+          </main>
+        `;
+
+        document.querySelector(".reader-title").textContent =
+          chapter?.heading || "Downloaded chapter";
+
+        const pages = document.getElementById("pages");
+        const cache = await caches.open(CACHE_NAME);
+
+        pages.innerHTML = "";
+
+        let index = 0;
+        let found = false;
+
+        while (true) {
+          const response = await cache.match(
+            `/offline/chapters/${chapterId}/${index}`,
+          );
+
+          if (!response) break;
+
+          found = true;
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+
+          const image = document.createElement("img");
+
+          image.src = url;
+          image.alt = `Page ${index + 1}`;
+          image.className = "page";
+
+          pages.appendChild(image);
+
+          index += 1;
+        }
+
+        if (!found) {
+          pages.innerHTML = `
+            <div class="container">
+              <div class="empty">
+                This chapter isn't available offline.
+              </div>
+            </div>
+          `;
+
+          return;
+        }
+
+        const end = document.createElement("p");
+
+        end.className = "end";
+        end.textContent = "End of chapter";
+
+        pages.appendChild(end);
+      }
+
+      const params = new URLSearchParams(location.search);
+      const chapterId = params.get("chapter");
+
+      if (chapterId) {
+        showReader(chapterId);
+      } else {
+        showLibrary();
+      }
+    </script>
+  </body>
+</html>
