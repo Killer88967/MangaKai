@@ -6,7 +6,7 @@ import type {
   Paginated,
 } from "@mangakai/shared";
 
-const API_URL = process.env.API_URL ?? "http://localhost:8787";
+const API_URL = resolveApiUrl();
 
 /** Thrown for anything the user can fix: bad token, validation, server down. */
 export class CliError extends Error {}
@@ -40,7 +40,7 @@ async function request<T>(
     });
   } catch {
     throw new CliError(
-      `Could not reach the API at ${API_URL}. Is it running? Try: pnpm dev`,
+      `Could not reach the API at ${API_URL}. Make sure the MangaKai API is running.`,
     );
   }
 
@@ -160,6 +160,21 @@ export function searchManga(query: string) {
   return request<Paginated<MangaSummary>>(
     `/api/manga/search?q=${encodeURIComponent(query)}&limit=10`,
   ) as Promise<Paginated<MangaSummary>>;
+}
+
+/**
+ * Need
+ */
+function resolveApiUrl(): string {
+  if (process.env.API_URL) {
+    return process.env.API_URL.replace(/\/$/, "");
+  }
+
+  if (process.env.RAILWAY_SERVICE_NAME) {
+    return `http://127.0.0.1:${process.env.PORT ?? "8787"}`;
+  }
+
+  return "http://localhost:8787";
 }
 
 export { API_URL };

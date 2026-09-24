@@ -28,7 +28,7 @@ app.route("/api/banners", banners);
 app.route("/admin", admin);
 
 if (process.env.NODE_ENV !== "test") {
-  const port = Number(process.env.API_URL ?? 8787);
+  const port = Number(process.env.PORT ?? 8787);
 
   serve(
     {
