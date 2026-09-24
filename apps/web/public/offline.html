@@ -23,8 +23,13 @@
         box-sizing: border-box;
       }
 
+      html {
+        background: #0a0910;
+      }
+
       body {
         margin: 0;
+        min-height: 100vh;
         background: #0a0910;
         color: #f4f4f5;
       }
@@ -32,6 +37,10 @@
       a {
         color: inherit;
         text-decoration: none;
+      }
+
+      button {
+        font: inherit;
       }
 
       .container {
@@ -51,6 +60,7 @@
       h1 {
         margin: 12px 0 0;
         font-size: 36px;
+        line-height: 1.1;
       }
 
       .muted {
@@ -101,33 +111,65 @@
       .reader-header {
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 20;
+
         display: flex;
         align-items: center;
         gap: 16px;
+
         padding: 16px;
+
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        background: #0a0910;
+        background: rgba(10, 9, 16, 0.96);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      .reader-back {
+        flex-shrink: 0;
+        color: #a1a1aa;
+        font-size: 14px;
       }
 
       .reader-title {
         min-width: 0;
         flex: 1;
+
         overflow: hidden;
+
+        color: #e4e4e7;
+        font-size: 14px;
+        font-weight: 600;
         text-align: center;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
       .offline {
+        flex-shrink: 0;
         color: #34d399;
         font-size: 12px;
+        font-weight: 600;
       }
-      
+
+      .page {
+        display: block;
+        width: 100%;
+        max-width: 768px;
+        height: auto;
+        margin: 0 auto;
+      }
+
+      .end {
+        padding: 40px 16px 120px;
+        color: #71717a;
+        text-align: center;
+      }
+
       .online-banner {
         position: fixed;
         right: 16px;
-        bottom: 16px;
+        bottom: 20px;
         left: 16px;
         z-index: 50;
 
@@ -143,12 +185,19 @@
         border: 1px solid rgba(52, 211, 153, 0.25);
         border-radius: 16px;
 
-        background: rgba(10, 9, 16, 0.96);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        background: rgba(17, 16, 23, 0.97);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
       }
 
       .online-banner.visible {
         display: flex;
+      }
+
+      .online-message {
+        min-width: 0;
       }
 
       .online-status {
@@ -157,8 +206,15 @@
         font-weight: 600;
       }
 
+      .online-description {
+        margin-top: 2px;
+        color: #71717a;
+        font-size: 12px;
+      }
+
       .online-button {
         flex-shrink: 0;
+
         padding: 9px 12px;
 
         border-radius: 10px;
@@ -168,28 +224,17 @@
         font-size: 13px;
         font-weight: 600;
       }
-
-      .page {
-        display: block;
-        width: 100%;
-        max-width: 768px;
-        height: auto;
-        margin: 0 auto;
-      }
-
-      .end {
-        padding: 40px 16px;
-        color: #71717a;
-        text-align: center;
-      }
     </style>
   </head>
 
   <body>
     <div id="app"></div>
-    
+
     <div id="online-banner" class="online-banner">
-      <span class="online-status">You're back online</span>
+      <div class="online-message">
+        <div class="online-status">You're back online</div>
+        <div class="online-description">Keep your place and continue online.</div>
+      </div>
 
       <a id="continue-online" class="online-button" href="/">
         Continue online
@@ -200,6 +245,11 @@
       const CACHE_NAME = "mangakai-chapters-v1";
       const METADATA_KEY = "mangakai-downloaded-chapters-v1";
 
+      let currentPage = 0;
+      let currentChapterId = null;
+      let pageObserver = null;
+      const objectUrls = [];
+
       function getChapters() {
         try {
           return JSON.parse(localStorage.getItem(METADATA_KEY) || "[]");
@@ -208,14 +258,70 @@
         }
       }
 
+      function getChapter(chapterId) {
+        return getChapters().find(
+          (chapter) => chapter.chapterId === chapterId,
+        );
+      }
+
+      function cleanupObjectUrls() {
+        for (const url of objectUrls) {
+          URL.revokeObjectURL(url);
+        }
+
+        objectUrls.length = 0;
+      }
+
+      function showOnlineBanner(chapterId) {
+        const chapter = getChapter(chapterId);
+
+        if (!chapter) return;
+
+        const params = new URLSearchParams();
+
+        if (chapter.mangaId) {
+          params.set("manga", chapter.mangaId);
+        }
+
+        params.set("title", chapter.heading);
+        params.set("page", String(currentPage));
+
+        const link = document.getElementById("continue-online");
+
+        link.href =
+          `/read/${encodeURIComponent(chapterId)}?${params.toString()}`;
+
+        document
+          .getElementById("online-banner")
+          .classList.add("visible");
+      }
+
+      function hideOnlineBanner() {
+        document
+          .getElementById("online-banner")
+          .classList.remove("visible");
+      }
+
       async function showLibrary() {
+        cleanupObjectUrls();
+
+        currentChapterId = null;
+        currentPage = 0;
+
+        if (pageObserver) {
+          pageObserver.disconnect();
+          pageObserver = null;
+        }
+
         const app = document.getElementById("app");
         const chapters = getChapters();
 
         app.innerHTML = `
           <main class="container">
             <div class="brand">MangaKai</div>
+
             <h1>You're offline</h1>
+
             <p class="muted">
               You can still read chapters you downloaded earlier.
             </p>
@@ -230,6 +336,7 @@
           list.innerHTML = `
             <div class="empty">
               <p>No downloaded chapters.</p>
+
               <p class="muted">
                 Download a chapter while you're online and it will appear here.
               </p>
@@ -248,8 +355,9 @@
             encodeURIComponent(chapter.chapterId);
 
           item.innerHTML = `
-            <div style="min-width:0">
+            <div style="min-width: 0">
               <div class="chapter-title"></div>
+
               <div class="chapter-meta">
                 ${chapter.pageCount} pages
               </div>
@@ -266,17 +374,22 @@
       }
 
       async function showReader(chapterId) {
-        const app = document.getElementById("app");
-        const chapters = getChapters();
+        cleanupObjectUrls();
 
-        const chapter = chapters.find(
-          (item) => item.chapterId === chapterId,
-        );
+        currentChapterId = chapterId;
+        currentPage = 0;
+
+        const app = document.getElementById("app");
+        const chapter = getChapter(chapterId);
 
         app.innerHTML = `
           <header class="reader-header">
-            <a href="/offline.html">← Downloads</a>
+            <a class="reader-back" href="/offline.html">
+              ← Downloads
+            </a>
+
             <div class="reader-title"></div>
+
             <span class="offline">Offline</span>
           </header>
 
@@ -308,11 +421,14 @@
           const blob = await response.blob();
           const url = URL.createObjectURL(blob);
 
+          objectUrls.push(url);
+
           const image = document.createElement("img");
 
           image.src = url;
           image.alt = `Page ${index + 1}`;
           image.className = "page";
+          image.dataset.page = String(index);
 
           pages.appendChild(image);
 
@@ -331,21 +447,76 @@
           return;
         }
 
+        pageObserver = new IntersectionObserver(
+          (entries) => {
+            let best = null;
+
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+
+              if (!best || entry.intersectionRatio > best.intersectionRatio) {
+                best = entry;
+              }
+            }
+
+            if (!best) return;
+
+            const page = Number(best.target.dataset.page);
+
+            if (Number.isInteger(page)) {
+              currentPage = page;
+
+              if (navigator.onLine) {
+                showOnlineBanner(chapterId);
+              }
+            }
+          },
+          {
+            threshold: [0.25, 0.5, 0.75],
+          },
+        );
+
+        document.querySelectorAll(".page").forEach((image) => {
+          pageObserver.observe(image);
+        });
+
         const end = document.createElement("p");
 
         end.className = "end";
         end.textContent = "End of chapter";
 
         pages.appendChild(end);
+
+        if (navigator.onLine) {
+          showOnlineBanner(chapterId);
+        }
       }
+
+      window.addEventListener("online", () => {
+        if (currentChapterId) {
+          showOnlineBanner(currentChapterId);
+        }
+      });
+
+      window.addEventListener("offline", () => {
+        hideOnlineBanner();
+      });
+
+      window.addEventListener("beforeunload", () => {
+        cleanupObjectUrls();
+
+        if (pageObserver) {
+          pageObserver.disconnect();
+        }
+      });
 
       const params = new URLSearchParams(location.search);
       const chapterId = params.get("chapter");
 
       if (chapterId) {
-        showReader(chapterId);
+        void showReader(chapterId);
       } else {
-        showLibrary();
+        void showLibrary();
       }
     </script>
   </body>
