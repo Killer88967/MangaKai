@@ -299,8 +299,7 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
             </div>
           ))}
 
-          {/* <p className="py-10 text-center text-sm text-zinc-500"> */}
-          <p className="text-center text-sm text-zinc-500">
+          <p className="py-10 text-center text-sm text-zinc-500">
             End of chapter
           </p>
         </>
