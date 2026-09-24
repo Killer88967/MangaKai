@@ -80,7 +80,7 @@ export function MangaSearch({ children }: MangaSearchProps) {
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-3">
+      <div id="search" className="mb-5 flex scroll-mt-24 items-center gap-3">
         <label className="relative block min-w-0 flex-1">
           <span className="sr-only">Search manga by title</span>
 

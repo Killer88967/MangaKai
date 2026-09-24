@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { BannerBar } from "@/components/banner-bar";
 import { SiteHeader } from "@/components/site-header";
+import { MobileNavigation } from "@/components/mobile-navigation";
 import { ServiceWorkerRegister } from "@/components/worker-register";
 import { getBanners } from "@/lib/api";
 import { DISMISSED_COOKIE, parseDismissed } from "@/lib/dismissed-banners";
@@ -69,6 +70,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
         <SiteHeader />
         {children}
+        <MobileNavigation />
       </body>
     </html>
   );

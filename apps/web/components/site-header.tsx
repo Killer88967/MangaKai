@@ -36,14 +36,6 @@ export async function SiteHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/downloads"
-            aria-label="Downloads"
-            className="flex h-10 items-center justify-center rounded-xl border border-border px-3 text-sm text-zinc-300 transition hover:border-border-strong hover:bg-white/5 hover:text-white md:hidden"
-          >
-            <span aria-hidden="true">↓</span>
-          </Link>
-
           {user ? (
             <>
               <div className="hidden min-w-0 sm:block">
