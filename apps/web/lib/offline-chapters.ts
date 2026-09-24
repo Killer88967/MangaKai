@@ -48,7 +48,13 @@ export async function downloadChapter(
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to download page ${page + 1}.`);
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+
+      throw new Error(
+        `Failed to download page ${page + 1} (${response.status}).`,
+      );
     }
 
     await cache.put(cacheUrl, response);

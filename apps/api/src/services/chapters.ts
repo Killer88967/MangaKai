@@ -118,7 +118,7 @@ export async function getChapterPage(
 
   if (!response.ok) {
     throw new Error(
-      `MangaDex@Home returned ${response.status} for chpater page.`,
+      `MangaDex@Home returned ${response.status} for chapter page.`,
     );
   }
 
