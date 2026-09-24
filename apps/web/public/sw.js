@@ -1,9 +1,11 @@
-const SHELL_CACHE = "mangakai-v3";
+const SHELL_CACHE = "mangakai-v4";
 const CHAPTER_CACHE = "mangakai-chapters-v1";
 
 const PRECACHE = [
+  "/",
   "/offline",
   "/offline-reader",
+  "/downloads",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
@@ -43,24 +45,42 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
 
-  // API stays network-only.
   if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(async () => {
-        const cache = await caches.open(SHELL_CACHE);
+      (async () => {
+        try {
+          return await fetch(request);
+        } catch {
+          if (url.pathname === "/offline-reader") {
+            const reader = await caches.match("/offline-reader");
 
-        if (url.pathname === "/offline-reader") {
-          return cache.match("/offline-reader");
+            if (reader) return reader;
+          }
+
+          if (url.pathname === "/downloads") {
+            const downloads = await caches.match("/downloads");
+
+            if (downloads) return downloads;
+          }
+
+          const offline = await caches.match("/offline");
+
+          if (offline) return offline;
+
+          const home = await caches.match("/");
+
+          if (home) return home;
+
+          return new Response("MangaKai is offline.", {
+            status: 503,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+            },
+          });
         }
-
-        if (url.pathname === "/offline") {
-          return cache.match("/offline");
-        }
-
-        return cache.match("/offline");
-      }),
+      })(),
     );
 
     return;
@@ -71,19 +91,19 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/_next/static/")
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => {
+      (async () => {
+        const cached = await caches.match(request);
+
         if (cached) return cached;
 
-        return fetch(request).then((response) => {
-          const copy = response.clone();
+        const response = await fetch(request);
+        const copy = response.clone();
 
-          caches.open(SHELL_CACHE).then((cache) => {
-            cache.put(request, copy);
-          });
+        const cache = await caches.open(SHELL_CACHE);
+        await cache.put(request, copy);
 
-          return response;
-        });
-      }),
+        return response;
+      })(),
     );
   }
 });
