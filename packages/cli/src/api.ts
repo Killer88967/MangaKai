@@ -162,9 +162,7 @@ export function searchManga(query: string) {
   ) as Promise<Paginated<MangaSummary>>;
 }
 
-/**
- * Need
- */
+/** Resolve the API endpoint for local development, Railway, or an explicit override. */
 function resolveApiUrl(): string {
   if (process.env.API_URL) {
     return process.env.API_URL.replace(/\/$/, "");
