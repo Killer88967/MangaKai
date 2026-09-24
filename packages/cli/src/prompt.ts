@@ -3,13 +3,16 @@ import color from "picocolors";
 import { parseDate } from "./status";
 
 /** Returns the value, or exits cleanly when the user hits Ctrl+C / Esc. */
-export function required<T>(value: T | symbol, message = "Cancelled."): T {
+export function required<T>(
+  value: T,
+  message = "Cancelled",
+): Exclude<T, symbol> {
   if (p.isCancel(value)) {
     p.cancel(message);
     process.exit(0);
   }
 
-  return value;
+  return value as Exclude<T, symbol>;
 }
 
 /** Blank input means "no value" for every optional banner field. */
