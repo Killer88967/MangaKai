@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { BannerBar } from "@/components/banner-bar";
 import { SiteHeader } from "@/components/site-header";
@@ -7,8 +7,45 @@ import { DISMISSED_COOKIE, parseDismissed } from "@/lib/dismissed-banners";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MangaKai — Find your next manga",
+  title: {
+    default: "MangaKai — Find your next manga",
+    template: "%s · MangaKai",
+  },
   description: "Search MangaDex for manga to read.",
+  applicationName: "MangaKai",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MangaKai",
+  },
+  icons: {
+    icon: [
+      {
+        url: "/icons/favicon-32.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        url: "/icons/favicon-48.png",
+        sizes: "48x48",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0910",
+  colorScheme: "dark",
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
