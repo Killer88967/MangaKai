@@ -10,6 +10,7 @@ import {
   getDownloadedPageCount,
   getDownloadedPageUrls,
   isChapterDownloaded,
+  saveDownloadedChapterMetadata,
 } from "@/lib/offline-chapters";
 
 interface ReaderProps {
@@ -81,14 +82,26 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
 
       try {
         const chapter = await getChapterPages(chapterId, controller.signal);
+        const isDownloaded = await isChapterDownloaded(
+          chapterId,
+          chapter.pages.length,
+        );
 
         if (controller.signal.aborted) return;
 
         setPages(chapter.pages);
 
-        setDownloaded(
-          await isChapterDownloaded(chapterId, chapter.pages.length),
-        );
+        setDownloaded(isDownloaded);
+
+        if (isDownloaded) {
+          saveDownloadedChapterMetadata({
+            chapterId,
+            mangaId,
+            heading,
+            pageCount: chapter.pages.length,
+            downloadedAt: new Date().toISOString(),
+          });
+        }
 
         setUsingOfflinePages(false);
       } catch (cause: unknown) {

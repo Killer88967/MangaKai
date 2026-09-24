@@ -120,13 +120,25 @@ export async function downloadChapter({
     onProgress?.(page + 1, pageCount);
   }
 
-  saveChapterMetadata({
+  saveDownloadedChapterMetadata({
     chapterId,
     mangaId,
     heading,
     pageCount,
     downloadedAt: new Date().toISOString(),
   });
+}
+
+export function saveDownloadedChapterMetadata(
+  chapter: DownloadedChapter,
+): void {
+  const chapters = readMetadata().filter(
+    (item) => item.chapterId !== chapter.chapterId,
+  );
+
+  chapters.unshift(chapter);
+
+  writeMetadata(chapters);
 }
 
 export async function deleteDownloadedChapter(
