@@ -19,6 +19,13 @@ export async function SiteHeader() {
           MangaKai
         </Link>
 
+        <Link
+          href="/downloads"
+          className="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+        >
+          Downloads
+        </Link>
+
         {user ? (
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-400">{user.displayName}</span>

@@ -1,7 +1,63 @@
 const CACHE_NAME = "mangakai-chapters-v1";
+const METADATA_KEY = "mangakai-downloaded-chapters-v1";
+
+export interface DownloadedChapter {
+  chapterId: string;
+  mangaId: string | null;
+  heading: string;
+  pageCount: number;
+  downloadedAt: string;
+}
+
+interface DownloadChapterOptions {
+  chapterId: string;
+  mangaId: string | null;
+  heading: string;
+  pageCount: number;
+  onProgress?: (downloaded: number, total: number) => void;
+}
 
 function pageCacheUrl(chapterId: string, page: number): string {
   return `/offline/chapters/${chapterId}/${page}`;
+}
+
+function readMetadata(): DownloadedChapter[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(METADATA_KEY);
+
+    if (!raw) return [];
+
+    return JSON.parse(raw) as DownloadedChapter[];
+  } catch {
+    return [];
+  }
+}
+
+function writeMetadata(chapters: DownloadedChapter[]): void {
+  window.localStorage.setItem(METADATA_KEY, JSON.stringify(chapters));
+}
+
+function saveChapterMetadata(chapter: DownloadedChapter): void {
+  const chapters = readMetadata().filter(
+    (item) => item.chapterId !== chapter.chapterId,
+  );
+
+  chapters.unshift(chapter);
+
+  writeMetadata(chapters);
+}
+
+function removeChapterMetadata(chapterId: string): void {
+  writeMetadata(readMetadata().filter((item) => item.chapterId !== chapterId));
+}
+
+export function getDownloadedChapters(): DownloadedChapter[] {
+  return readMetadata().sort(
+    (a, b) =>
+      new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime(),
+  );
 }
 
 export async function getDownloadedPageCount(
@@ -25,16 +81,17 @@ export async function isChapterDownloaded(
   return (await getDownloadedPageCount(chapterId)) === pageCount;
 }
 
-export async function downloadChapter(
-  chapterId: string,
-  pageCount: number,
-  onProgress?: (downloaded: number, total: number) => void,
-): Promise<void> {
+export async function downloadChapter({
+  chapterId,
+  mangaId,
+  heading,
+  pageCount,
+  onProgress,
+}: DownloadChapterOptions): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
 
   for (let page = 0; page < pageCount; page += 1) {
     const cacheUrl = pageCacheUrl(chapterId, page);
-
     const existing = await cache.match(cacheUrl);
 
     if (existing) {
@@ -53,7 +110,8 @@ export async function downloadChapter(
       } | null;
 
       throw new Error(
-        `Failed to download page ${page + 1} (${response.status}).`,
+        body?.error ??
+          `Failed to download page ${page + 1} (${response.status}).`,
       );
     }
 
@@ -61,6 +119,14 @@ export async function downloadChapter(
 
     onProgress?.(page + 1, pageCount);
   }
+
+  saveChapterMetadata({
+    chapterId,
+    mangaId,
+    heading,
+    pageCount,
+    downloadedAt: new Date().toISOString(),
+  });
 }
 
 export async function deleteDownloadedChapter(
@@ -79,6 +145,8 @@ export async function deleteDownloadedChapter(
       .filter((request) => request.url.startsWith(prefix))
       .map((request) => cache.delete(request)),
   );
+
+  removeChapterMetadata(chapterId);
 }
 
 export async function getDownloadedPageUrls(

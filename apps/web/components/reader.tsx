@@ -43,8 +43,14 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
       setDownloadError(null);
       setDownloadProgress(0);
 
-      await downloadChapter(chapterId, pages.length, (current, total) => {
-        setDownloadProgress(Math.round((current / total) * 100));
+      await downloadChapter({
+        chapterId,
+        mangaId,
+        heading,
+        pageCount: pages.length,
+        onProgress: (current, total) => {
+          setDownloadProgress(Math.round((current / total) * 100));
+        },
       });
 
       setDownloaded(true);
