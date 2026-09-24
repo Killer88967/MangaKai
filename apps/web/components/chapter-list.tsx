@@ -32,9 +32,11 @@ function ChapterMeta({ chapter }: { chapter: Chapter }) {
 export async function ChapterList({
   mangaId,
   title,
+  cover,
 }: {
   mangaId: string;
   title: string;
+  cover: string | null;
 }) {
   const chapters = await getChapters(mangaId).catch(() => null);
 
@@ -94,7 +96,15 @@ export async function ChapterList({
             >
               {chapter.readable ? (
                 <Link
-                  href={`/read/${chapter.id}?manga=${mangaId}&title=${encodeURIComponent(label)}`}
+                  href={{
+                    pathname: `/read/${chapter.id}`,
+                    query: {
+                      manga: mangaId,
+                      title: label,
+                      series: title,
+                      ...(cover ? { cover } : {}),
+                    },
+                  }}
                   className="group flex min-h-[72px] items-center gap-4 px-4 py-3 transition hover:bg-surface-hover sm:px-5"
                 >
                   {content}

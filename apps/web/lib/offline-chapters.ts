@@ -4,14 +4,34 @@ const METADATA_KEY = "mangakai-downloaded-chapters-v1";
 export interface DownloadedChapter {
   chapterId: string;
   mangaId: string | null;
+
+  /**
+   * Series metadata is stored with the chapter so the Downloads library can
+   * group chapters without making another API request.
+   *
+   * Optional for backwards compatibility with downloads created before the
+   * catalogue-style Downloads page existed.
+   */
+  mangaTitle?: string;
+  mangaCover?: string | null;
+
   heading: string;
   pageCount: number;
   downloadedAt: string;
 }
 
+export interface DownloadedManga {
+  mangaId: string;
+  title: string;
+  cover: string | null;
+  chapters: DownloadedChapter[];
+}
+
 interface DownloadChapterOptions {
   chapterId: string;
   mangaId: string | null;
+  mangaTitle?: string;
+  mangaCover?: string | null;
   heading: string;
   pageCount: number;
   onProgress?: (downloaded: number, total: number) => void;
@@ -50,6 +70,51 @@ export function getDownloadedChapters(): DownloadedChapter[] {
   );
 }
 
+/**
+ * Groups downloaded chapters into their parent manga.
+ *
+ * Older downloads may not have series metadata yet. As long as they have a
+ * manga id they still receive their own catalogue entry, and opening that
+ * chapter online later can repair the missing title/cover metadata.
+ */
+export function getDownloadedManga(): DownloadedManga[] {
+  const grouped = new Map<string, DownloadedManga>();
+
+  for (const chapter of getDownloadedChapters()) {
+    const mangaId = chapter.mangaId ?? `unknown:${chapter.chapterId}`;
+
+    const existing = grouped.get(mangaId);
+
+    if (existing) {
+      existing.chapters.push(chapter);
+
+      if (!existing.cover && chapter.mangaCover) {
+        existing.cover = chapter.mangaCover;
+      }
+
+      if (existing.title === "Unknown series" && chapter.mangaTitle) {
+        existing.title = chapter.mangaTitle;
+      }
+
+      continue;
+    }
+
+    grouped.set(mangaId, {
+      mangaId,
+      title: chapter.mangaTitle ?? "Unknown series",
+      cover: chapter.mangaCover ?? null,
+      chapters: [chapter],
+    });
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const aLatest = new Date(a.chapters[0]?.downloadedAt ?? 0).getTime();
+    const bLatest = new Date(b.chapters[0]?.downloadedAt ?? 0).getTime();
+
+    return bLatest - aLatest;
+  });
+}
+
 export async function getDownloadedPageCount(
   chapterId: string,
 ): Promise<number> {
@@ -74,6 +139,8 @@ export async function isChapterDownloaded(
 export async function downloadChapter({
   chapterId,
   mangaId,
+  mangaTitle,
+  mangaCover,
   heading,
   pageCount,
   onProgress,
@@ -91,7 +158,9 @@ export async function downloadChapter({
 
     const response = await fetch(
       `/api/chapters/${encodeURIComponent(chapterId)}/download/${page}`,
-      { cache: "no-store" },
+      {
+        cache: "no-store",
+      },
     );
 
     if (!response.ok) {
@@ -113,6 +182,8 @@ export async function downloadChapter({
   saveDownloadedChapterMetadata({
     chapterId,
     mangaId,
+    mangaTitle,
+    mangaCover,
     heading,
     pageCount,
     downloadedAt: new Date().toISOString(),
@@ -128,11 +199,25 @@ export function getDownloadedChapter(
 export function saveDownloadedChapterMetadata(
   chapter: DownloadedChapter,
 ): void {
+  const existing = readMetadata().find(
+    (item) => item.chapterId === chapter.chapterId,
+  );
+
   const chapters = readMetadata().filter(
     (item) => item.chapterId !== chapter.chapterId,
   );
 
-  chapters.unshift(chapter);
+  /**
+   * Preserve series metadata when an older call only repairs chapter metadata.
+   * This prevents a later reader visit from accidentally erasing the catalogue
+   * title or cover that was stored when the chapter was downloaded.
+   */
+  chapters.unshift({
+    ...existing,
+    ...chapter,
+    mangaTitle: chapter.mangaTitle ?? existing?.mangaTitle,
+    mangaCover: chapter.mangaCover ?? existing?.mangaCover ?? null,
+  });
 
   writeMetadata(chapters);
 }
@@ -155,6 +240,19 @@ export async function deleteDownloadedChapter(
   );
 
   removeChapterMetadata(chapterId);
+}
+
+/**
+ * Removes every downloaded chapter belonging to one manga.
+ */
+export async function deleteDownloadedManga(mangaId: string): Promise<void> {
+  const chapters = readMetadata().filter(
+    (chapter) => chapter.mangaId === mangaId,
+  );
+
+  await Promise.all(
+    chapters.map((chapter) => deleteDownloadedChapter(chapter.chapterId)),
+  );
 }
 
 export async function getDownloadedPageUrls(

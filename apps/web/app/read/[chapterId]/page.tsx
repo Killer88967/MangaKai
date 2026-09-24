@@ -1,23 +1,31 @@
 import { Reader } from "@/components/reader";
 
 /**
- * The reader is a client component: it measures every page fetch so the API
- * can report retrieval health back to MangaDex@Home, which is only possible in
- * the code that performs the fetch.
+ * The reader is a client component because chapter pages and downloaded copies
+ * are managed in the browser.
  *
- * `manga` and `title` arrive as search params from the chapter list so the
- * page can render its heading and back link without a second round trip.
+ * Manga and chapter metadata arrive as search params from the chapter list so
+ * the reader can render immediately and preserve enough information for the
+ * offline Downloads library without another manga lookup.
  */
 export default async function ReadPage(props: PageProps<"/read/[chapterId]">) {
   const { chapterId } = await props.params;
-  const { manga, title } = await props.searchParams;
+  const { manga, title, series, cover } = await props.searchParams;
 
   const mangaId = typeof manga === "string" ? manga : null;
   const heading = typeof title === "string" ? title : "Reading";
+  const mangaTitle = typeof series === "string" ? series : undefined;
+  const mangaCover = typeof cover === "string" ? cover : null;
 
   return (
     <main className="min-h-screen bg-background">
-      <Reader chapterId={chapterId} mangaId={mangaId} heading={heading} />
+      <Reader
+        chapterId={chapterId}
+        mangaId={mangaId}
+        mangaTitle={mangaTitle}
+        mangaCover={mangaCover}
+        heading={heading}
+      />
     </main>
   );
 }

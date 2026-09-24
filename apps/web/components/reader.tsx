@@ -16,6 +16,8 @@ import {
 interface ReaderProps {
   chapterId: string;
   mangaId: string | null;
+  mangaTitle?: string;
+  mangaCover?: string | null;
   heading: string;
 }
 
@@ -28,7 +30,13 @@ interface ReaderProps {
  */
 const MAX_REFRESHES = 2;
 
-export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
+export function Reader({
+  chapterId,
+  mangaId,
+  mangaTitle,
+  mangaCover,
+  heading,
+}: ReaderProps) {
   const [pages, setPages] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -57,6 +65,8 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
       await downloadChapter({
         chapterId,
         mangaId,
+        mangaTitle,
+        mangaCover,
         heading,
         pageCount: pages.length,
         onProgress: (current, total) => {
@@ -114,6 +124,8 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
           saveDownloadedChapterMetadata({
             chapterId,
             mangaId,
+            mangaTitle,
+            mangaCover,
             heading,
             pageCount: chapter.pages.length,
             downloadedAt: new Date().toISOString(),
@@ -166,7 +178,7 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
        */
       objectUrls.forEach(URL.revokeObjectURL);
     };
-  }, [chapterId, mangaId, heading, attempt]);
+  }, [chapterId, mangaId, mangaTitle, mangaCover, heading, attempt]);
 
   /**
    * Restore the page the offline reader was displaying before connectivity

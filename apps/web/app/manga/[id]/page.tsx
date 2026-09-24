@@ -213,7 +213,11 @@ export default async function MangaPage({ params }: MangaPageProps) {
                   wait on it.
                 */}
                 <Suspense fallback={<ChapterListSkeleton />}>
-                  <ChapterList mangaId={manga.id} title={manga.title} />
+                  <ChapterList
+                    mangaId={manga.id}
+                    title={manga.title}
+                    cover={manga.cover?.small ?? null}
+                  />
                 </Suspense>
               </div>
             </section>
