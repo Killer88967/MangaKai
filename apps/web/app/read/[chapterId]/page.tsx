@@ -16,7 +16,7 @@ export default async function ReadPage(props: PageProps<"/read/[chapterId]">) {
   const heading = typeof title === "string" ? title : "Reading";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#251447_0%,#0a0910_38%)] px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-background">
       <Reader chapterId={chapterId} mangaId={mangaId} heading={heading} />
     </main>
   );

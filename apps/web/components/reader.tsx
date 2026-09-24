@@ -222,63 +222,88 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md rounded-3xl border border-red-400/20 bg-red-400/10 p-8 text-center">
-        <h2 className="text-xl font-bold text-white">
-          We couldn&apos;t open this chapter
-        </h2>
-        <p className="mt-3 leading-7 text-zinc-300">{error}</p>
-        <Link
-          href={backHref}
-          className="mt-6 inline-flex rounded-xl bg-violet-500 px-5 py-3 font-semibold text-white transition hover:bg-violet-400"
-        >
-          Back to the manga
-        </Link>
+      <div className="mx-auto flex min-h-[70vh] max-w-md items-center px-4">
+        <div className="w-full rounded-2xl border border-red-400/20 bg-red-400/10 p-8 text-center">
+          <h2 className="text-xl font-bold text-white">
+            We couldn&apos;t open this chapter
+          </h2>
+
+          <p className="mt-3 leading-7 text-zinc-300">{error}</p>
+
+          <Link
+            href={backHref}
+            className="mt-6 inline-flex h-11 items-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover"
+          >
+            Back to the manga
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-        <Link
-          href={backHref}
-          className="text-sm text-zinc-400 transition hover:text-violet-300"
-        >
-          <span aria-hidden="true">←</span> Back
-        </Link>
-
-        <h1 className="min-w-0 flex-1 truncate text-center text-sm font-semibold text-zinc-200">
-          {heading}
-        </h1>
-
-        {pages && (
-          <button
-            type="button"
-            onClick={downloaded ? handleRemoveDownload : handleDownload}
-            disabled={downloadProgress !== null || usingOfflinePages}
-            className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+      <header className="sticky top-16 z-30 border-b border-border bg-background/94 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-3 px-3 sm:px-4">
+          <Link
+            href={backHref}
+            aria-label="Back to manga"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-white/5 hover:text-white"
           >
-            {downloadProgress !== null
-              ? `${downloadProgress}%`
-              : downloaded
-                ? "Remove"
-                : "Download"}
-          </button>
-        )}
-      </div>
+            <span aria-hidden="true">←</span>
+          </Link>
+
+          <div className="min-w-0 flex-1 text-center">
+            <p className="truncate text-sm font-semibold text-zinc-200">
+              {heading}
+            </p>
+
+            {pages && (
+              <p className="mt-0.5 text-[11px] text-subtle">
+                {pages.length} pages
+              </p>
+            )}
+          </div>
+
+          {pages ? (
+            <button
+              type="button"
+              onClick={downloaded ? handleRemoveDownload : handleDownload}
+              disabled={downloadProgress !== null || usingOfflinePages}
+              className="flex h-9 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-semibold text-zinc-300 transition hover:border-border-strong hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {downloadProgress !== null
+                ? `${downloadProgress}%`
+                : downloaded
+                  ? "Downloaded"
+                  : "Download"}
+            </button>
+          ) : (
+            <div className="size-9" />
+          )}
+        </div>
+      </header>
 
       {usingOfflinePages && (
-        <p className="text-center text-sm text-emerald-400">
+        <div className="border-b border-emerald-400/15 bg-emerald-400/8 px-4 py-2 text-center text-xs font-medium text-emerald-300">
           Reading downloaded chapter
-        </p>
+        </div>
       )}
 
       {downloadError && (
-        <p className="text-center text-sm text-red-400">{downloadError}</p>
+        <div className="border-b border-red-400/15 bg-red-400/8 px-4 py-2 text-center text-xs text-red-300">
+          {downloadError}
+        </div>
       )}
 
       {pages === null ? (
-        <p className="text-center text-sm text-zinc-500">Loading chapter…</p>
+        <div className="flex min-h-[55vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="mx-auto size-6 animate-spin rounded-full border-2 border-white/10 border-t-brand" />
+
+            <p className="mt-4 text-sm text-subtle">Loading chapter…</p>
+          </div>
+        </div>
       ) : (
         <>
           {/*
@@ -288,20 +313,31 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
             The wrapper also gives reconnects from the offline reader a stable
             scroll target through `?page=<index>`.
           */}
-          {pages.map((url, index) => (
-            <div key={index} id={`reader-page-${index}`}>
-              <ReaderPage
-                url={url}
-                index={index}
-                total={pages.length}
-                onExpired={handleExpired}
-              />
-            </div>
-          ))}
+          <div className="bg-black">
+            {pages.map((url, index) => (
+              <div key={index} id={`reader-page-${index}`}>
+                <ReaderPage
+                  url={url}
+                  index={index}
+                  total={pages.length}
+                  onExpired={handleExpired}
+                />
+              </div>
+            ))}
+          </div>
 
-          <p className="py-10 text-center text-sm text-zinc-500">
-            End of chapter
-          </p>
+          <footer className="border-t border-border bg-background px-4 py-12 text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-subtle">
+              End of chapter
+            </p>
+
+            <Link
+              href={backHref}
+              className="mt-4 inline-flex h-10 items-center rounded-xl bg-surface-raised px-4 text-sm font-semibold text-zinc-200 ring-1 ring-white/8 transition hover:bg-surface-hover hover:text-white"
+            >
+              Back to manga
+            </Link>
+          </footer>
         </>
       )}
     </div>
