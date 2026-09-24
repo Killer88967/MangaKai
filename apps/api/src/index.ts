@@ -28,7 +28,18 @@ app.route("/api/banners", banners);
 app.route("/admin", admin);
 
 if (process.env.NODE_ENV !== "test") {
-  serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 8787) });
+  const port = Number(process.env.API_URL ?? 8787);
+
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+      hostname: "0.0.0.0",
+    },
+    (info) => {
+      console.log(`MangaKai API listening on port ${info.port}`);
+    },
+  );
 }
 
 export default app;
