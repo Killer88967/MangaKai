@@ -137,6 +137,15 @@ export interface AdminBanner extends Banner {
   updatedAt: string;
 }
 
+export const USER_ROLES = [
+  "user",
+  "creator",
+  "moderator",
+  "admin",
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+
 /**
  * A MangaKai account.
  *
@@ -147,6 +156,7 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  role: UserRole;
   createdAt: string;
 }
 

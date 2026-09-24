@@ -1,26 +1,25 @@
 import { createMiddleware } from "hono/factory";
+import { resolveUser, type UserVariables } from "./user";
 
 /**
- * Stopgap admin gate: a shared secret in ADMIN_TOKEN.
+ * Restricts `/api/admin/*` to MangaKai administrators.
  *
- * This exists so admin endpoints are never open while the real user system is
- * still being built. When sessions and roles land, replace the body of this
- * middleware with a role check — every /admin route already goes through it.
+ * Admin access uses the same database-backed session as the rest of MangaKai,
+ * rather than a separate shared secret. Changing a user's role therefore takes
+ * effect on their next authenticated request without issuing a special token.
  */
-export const requireAdmin = createMiddleware(async (c, next) => {
-  const expected = process.env.ADMIN_TOKEN;
+export const requireAdmin = createMiddleware<UserVariables>(async (c, next) => {
+  const user = await resolveUser(c);
 
-  if (!expected) {
-    console.error("ADMIN_TOKEN is not set; refusing all admin requests.");
-    return c.json({ error: "Admin access is not configured." }, 503);
+  if (!user) {
+    return c.json({ error: "You need to be signed in." }, 401);
   }
 
-  const header = c.req.header("authorization") ?? "";
-  const provided = header.startsWith("Bearer ") ? header.slice(7) : "";
-
-  if (provided !== expected) {
-    return c.json({ error: "Unauthorized." }, 401);
+  if (user.role !== "admin") {
+    return c.json({ error: "Administrator access required." }, 403);
   }
+
+  c.set("user", user);
 
   await next();
 });

@@ -70,6 +70,7 @@ function toUser(row: UserRow): User {
     id: row.id,
     email: row.email,
     displayName: row.displayName,
+    role: row.role,
     createdAt: row.createdAt.toISOString(),
   };
 }

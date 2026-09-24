@@ -7,7 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { BannerVariant } from "@mangakai/shared";
+import type { BannerVariant, UserRole } from "@mangakai/shared";
 
 /**
  * Everything in here is data MangaKai owns. Manga, chapters, covers and
@@ -26,6 +26,14 @@ export const users = pgTable("users", {
   /** scrypt, with its parameters embedded — see `apps/api/src/lib/password.ts`. */
   passwordHash: text("password_hash").notNull(),
   displayName: text("display_name").notNull(),
+
+  /**
+   * Application permissions.
+   *
+   * Stored as text instead of Postgres enum so adding a new role later does
+   * not require altering a database enum type.
+   */
+  role: text("role").$type<UserRole>().notNull().default("user"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
