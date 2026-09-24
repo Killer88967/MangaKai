@@ -137,12 +137,7 @@ export interface AdminBanner extends Banner {
   updatedAt: string;
 }
 
-export const USER_ROLES = [
-  "user",
-  "creator",
-  "moderator",
-  "admin",
-] as const;
+export const USER_ROLES = ["user", "creator", "moderator", "admin"] as const;
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 

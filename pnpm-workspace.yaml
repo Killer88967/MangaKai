@@ -18,3 +18,10 @@ minimumReleaseAgeExclude:
   - expo-router@57.0.10
   - expo@57.0.10
   - prettier@3.9.9
+  - '@turbo/darwin-64@2.11.4'
+  - '@turbo/darwin-arm64@2.11.4'
+  - '@turbo/linux-64@2.11.4'
+  - '@turbo/linux-arm64@2.11.4'
+  - '@turbo/windows-64@2.11.4'
+  - '@turbo/windows-arm64@2.11.4'
+  - turbo@2.11.4
