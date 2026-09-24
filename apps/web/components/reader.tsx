@@ -37,6 +37,16 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [usingOfflinePages, setUsingOfflinePages] = useState(false);
 
+  // One re-resolve per expiry, however many pages 403 at once.
+  const resolving = useRef(false);
+
+  /**
+   * A reconnect from the static offline reader can send us back with `?page=`.
+   * Only restore that position once: chapter host refreshes change `pages`, and
+   * repeatedly scrolling on every refresh would yank the reader backwards.
+   */
+  const restoredPage = useRef(false);
+
   async function handleDownload() {
     if (!pages || usingOfflinePages) return;
 
@@ -70,8 +80,9 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
     setDownloaded(false);
   }
 
-  // One re-resolve per expiry, however many pages 403 at once.
-  const resolving = useRef(false);
+  useEffect(() => {
+    restoredPage.current = false;
+  }, [chapterId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -82,17 +93,23 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
 
       try {
         const chapter = await getChapterPages(chapterId, controller.signal);
-        const isDownloaded = await isChapterDownloaded(
-          chapterId,
-          chapter.pages.length,
-        );
 
         if (controller.signal.aborted) return;
 
         setPages(chapter.pages);
 
+        const isDownloaded = await isChapterDownloaded(
+          chapterId,
+          chapter.pages.length,
+        );
+
         setDownloaded(isDownloaded);
 
+        /**
+         * Downloads created before metadata tracking existed may already have
+         * every image in Cache Storage but no entry on the Downloads page.
+         * Opening one online repairs that metadata without forcing a re-download.
+         */
         if (isDownloaded) {
           saveDownloadedChapterMetadata({
             chapterId,
@@ -107,6 +124,10 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
       } catch (cause: unknown) {
         if (controller.signal.aborted) return;
 
+        /**
+         * If the network/API is unavailable but this chapter was downloaded,
+         * read the cached image blobs directly instead of failing the reader.
+         */
         const cachedCount = await getDownloadedPageCount(chapterId);
 
         if (cachedCount > 0) {
@@ -120,6 +141,7 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
           setPages(objectUrls);
           setDownloaded(true);
           setUsingOfflinePages(true);
+
           return;
         }
 
@@ -137,9 +159,47 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
 
     return () => {
       controller.abort();
+
+      /**
+       * Cached pages are exposed to `<img>` as temporary object URLs. Revoke
+       * them when the reader unmounts so long sessions do not leak blob memory.
+       */
       objectUrls.forEach(URL.revokeObjectURL);
     };
-  }, [chapterId, attempt]);
+  }, [chapterId, mangaId, heading, attempt]);
+
+  /**
+   * Restore the page the offline reader was displaying before connectivity
+   * returned.
+   *
+   * The static offline reader sends a zero-based page index in `?page=`.
+   */
+  useEffect(() => {
+    if (!pages || restoredPage.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const rawPage = params.get("page");
+
+    if (rawPage === null) {
+      restoredPage.current = true;
+      return;
+    }
+
+    const page = Number(rawPage);
+
+    if (!Number.isInteger(page) || page < 0 || page >= pages.length) {
+      restoredPage.current = true;
+      return;
+    }
+
+    restoredPage.current = true;
+
+    requestAnimationFrame(() => {
+      document.getElementById(`reader-page-${page}`)?.scrollIntoView({
+        block: "start",
+      });
+    });
+  }, [pages]);
 
   /**
    * MangaDex guarantees a page host for roughly 15 minutes and then answers
@@ -164,7 +224,7 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
     return (
       <div className="mx-auto max-w-md rounded-3xl border border-red-400/20 bg-red-400/10 p-8 text-center">
         <h2 className="text-xl font-bold text-white">
-          We couldn’t open this chapter
+          We couldn&apos;t open this chapter
         </h2>
         <p className="mt-3 leading-7 text-zinc-300">{error}</p>
         <Link
@@ -224,15 +284,19 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
           {/*
             Keyed by position, not URL: re-resolving swaps every URL, and
             keying on those would remount each page and lose the reader's place.
+
+            The wrapper also gives reconnects from the offline reader a stable
+            scroll target through `?page=<index>`.
           */}
           {pages.map((url, index) => (
-            <ReaderPage
-              key={index}
-              url={url}
-              index={index}
-              total={pages.length}
-              onExpired={handleExpired}
-            />
+            <div key={index} id={`reader-page-${index}`}>
+              <ReaderPage
+                url={url}
+                index={index}
+                total={pages.length}
+                onExpired={handleExpired}
+              />
+            </div>
           ))}
 
           <p className="py-10 text-center text-sm text-zinc-500">
