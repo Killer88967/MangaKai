@@ -1,0 +1,60 @@
+
+<svg width="1024" height="1024" viewBox="0 0 1024 1024"
+     xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#171321"/>
+      <stop offset="100%" stop-color="#09070d"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <rect
+    x="180"
+    y="150"
+    width="664"
+    height="724"
+    rx="96"
+    fill="#111018"
+    stroke="url(#accent)"
+    stroke-width="34"
+  />
+
+  <!-- Manga page divider -->
+  <path
+    d="M512 175 V850"
+    stroke="#292431"
+    stroke-width="22"
+  />
+
+  <!-- M -->
+  <path
+    d="M270 690 V350
+       L390 535
+       L510 350
+       V690"
+    fill="none"
+    stroke="url(#accent)"
+    stroke-width="70"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- K -->
+  <path
+    d="M585 350 V690
+       M585 535 L755 355
+       M585 535 L770 700"
+    fill="none"
+    stroke="#f4f4f5"
+    stroke-width="70"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

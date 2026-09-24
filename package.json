@@ -20,11 +20,11 @@
     "ports": "pnpm --filter @mangakai/cli run ports"
   },
   "devDependencies": {
-    "prettier": "3.7.4",
-    "turbo": "^2.10.8",
+    "prettier": "3.9.9",
+    "turbo": "^2.11.3",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "pnpm@12.6.0",
   "engines": {
     "node": ">=18"
   }
