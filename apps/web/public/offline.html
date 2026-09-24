@@ -15,8 +15,7 @@
         color-scheme: dark;
         background: #0a0910;
         color: #f4f4f5;
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       * {
@@ -233,7 +232,9 @@
     <div id="online-banner" class="online-banner">
       <div class="online-message">
         <div class="online-status">You're back online</div>
-        <div class="online-description">Keep your place and continue online.</div>
+        <div class="online-description">
+          Keep your place and continue online.
+        </div>
       </div>
 
       <a id="continue-online" class="online-button" href="/">
@@ -259,9 +260,7 @@
       }
 
       function getChapter(chapterId) {
-        return getChapters().find(
-          (chapter) => chapter.chapterId === chapterId,
-        );
+        return getChapters().find((chapter) => chapter.chapterId === chapterId);
       }
 
       function cleanupObjectUrls() {
@@ -288,18 +287,13 @@
 
         const link = document.getElementById("continue-online");
 
-        link.href =
-          `/read/${encodeURIComponent(chapterId)}?${params.toString()}`;
+        link.href = `/read/${encodeURIComponent(chapterId)}?${params.toString()}`;
 
-        document
-          .getElementById("online-banner")
-          .classList.add("visible");
+        document.getElementById("online-banner").classList.add("visible");
       }
 
       function hideOnlineBanner() {
-        document
-          .getElementById("online-banner")
-          .classList.remove("visible");
+        document.getElementById("online-banner").classList.remove("visible");
       }
 
       async function showLibrary() {
@@ -351,8 +345,7 @@
 
           item.className = "chapter";
           item.href =
-            "/offline.html?chapter=" +
-            encodeURIComponent(chapter.chapterId);
+            "/offline.html?chapter=" + encodeURIComponent(chapter.chapterId);
 
           item.innerHTML = `
             <div style="min-width: 0">
@@ -366,8 +359,7 @@
             <span class="read">Read →</span>
           `;
 
-          item.querySelector(".chapter-title").textContent =
-            chapter.heading;
+          item.querySelector(".chapter-title").textContent = chapter.heading;
 
           list.appendChild(item);
         }

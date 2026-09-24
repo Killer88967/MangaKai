@@ -6,20 +6,37 @@ interface SectionRowProps {
   children: ReactNode;
 }
 
-/** A titled, horizontally scrolling shelf. Shared by every homepage row. */
+/**
+ * A horizontally scrolling discovery shelf.
+ *
+ * The edge-to-edge mobile overflow is intentional: it feels closer to a native
+ * media app while desktop keeps the row aligned with the rest of the page.
+ */
 export function SectionRow({ title, subtitle, children }: SectionRowProps) {
   return (
-    <section className="mt-12">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
-        {subtitle && <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>}
+    <section className="mt-10 sm:mt-14">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-[-0.025em] text-white sm:text-2xl">
+            {title}
+          </h2>
+
+          {subtitle && <p className="mt-1 text-sm text-subtle">{subtitle}</p>}
+        </div>
       </div>
-      <div className="flex snap-x gap-4 overflow-x-auto pb-4">{children}</div>
+
+      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:-mx-0 sm:gap-4 sm:px-0 [&::-webkit-scrollbar]:hidden">
+        {children}
+      </div>
     </section>
   );
 }
 
-/** Fixed-width slot so cards keep their aspect ratio inside a scroller. */
+/** Fixed-width slot so covers remain consistent inside discovery shelves. */
 export function RowItem({ children }: { children: ReactNode }) {
-  return <div className="w-36 shrink-0 snap-start sm:w-44">{children}</div>;
+  return (
+    <div className="w-[138px] shrink-0 snap-start sm:w-[160px] lg:w-[176px]">
+      {children}
+    </div>
+  );
 }
