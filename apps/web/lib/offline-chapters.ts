@@ -39,16 +39,6 @@ function writeMetadata(chapters: DownloadedChapter[]): void {
   window.localStorage.setItem(METADATA_KEY, JSON.stringify(chapters));
 }
 
-function saveChapterMetadata(chapter: DownloadedChapter): void {
-  const chapters = readMetadata().filter(
-    (item) => item.chapterId !== chapter.chapterId,
-  );
-
-  chapters.unshift(chapter);
-
-  writeMetadata(chapters);
-}
-
 function removeChapterMetadata(chapterId: string): void {
   writeMetadata(readMetadata().filter((item) => item.chapterId !== chapterId));
 }
