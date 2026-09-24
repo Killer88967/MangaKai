@@ -238,7 +238,7 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
         <Link
           href={backHref}
