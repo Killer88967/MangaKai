@@ -129,6 +129,12 @@ export async function downloadChapter({
   });
 }
 
+export function getDownloadedChapter(
+  chapterId: string,
+): DownloadedChapter | undefined {
+  return readMetadata().find((chapter) => chapter.chapterId === chapterId);
+}
+
 export function saveDownloadedChapterMetadata(
   chapter: DownloadedChapter,
 ): void {
