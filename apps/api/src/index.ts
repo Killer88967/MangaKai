@@ -8,7 +8,6 @@ import chapters from "./routes/chapters";
 import home from "./routes/home";
 import manga from "./routes/manga";
 
-// Just because i want to add a comment
 const app = new Hono();
 
 // The web app proxies through Next so it is same-origin; Expo is not.
