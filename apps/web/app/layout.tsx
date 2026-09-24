@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "black",
     title: "MangaKai",
   },
   icons: {
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#0a0910",
   colorScheme: "dark",
-  viewportFit: "cover",
+  viewportFit: "auto",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
