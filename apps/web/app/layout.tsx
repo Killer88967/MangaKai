@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { BannerBar } from "@/components/banner-bar";
 import { SiteHeader } from "@/components/site-header";
+import { ServiceWorkerRegister } from "@/components/worker-register";
 import { getBanners } from "@/lib/api";
 import { DISMISSED_COOKIE, parseDismissed } from "@/lib/dismissed-banners";
 import "./globals.css";
@@ -59,6 +60,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
+        <ServiceWorkerRegister />
         <BannerBar
           initialBanners={banners.filter(
             (banner) => !dismissed.includes(banner.id),
