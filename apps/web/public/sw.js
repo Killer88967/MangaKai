@@ -81,6 +81,7 @@ self.addEventListener("fetch", (event) => {
         const copy = response.clone();
 
         const cache = await caches.open(SHELL_CACHE);
+
         await cache.put(request, copy);
 
         return response;
