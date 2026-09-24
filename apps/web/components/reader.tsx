@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ReaderPage } from "@/components/reader-page";
 import { getChapterPages } from "@/lib/api";
+import {
+  deleteDownloadedChapter,
+  downloadChapter,
+  getDownloadedPageCount,
+  getDownloadedPageUrls,
+  isChapterDownloaded,
+} from "@/lib/offline-chapters";
 
 interface ReaderProps {
   chapterId: string;
@@ -24,29 +31,95 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
   const [pages, setPages] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [downloaded, setDownloaded] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [usingOfflinePages, setUsingOfflinePages] = useState(false);
+
+  async function handleDownload() {
+    if (!pages || usingOfflinePages) return;
+
+    try {
+      setDownloadError(null);
+      setDownloadProgress(0);
+
+      await downloadChapter(chapterId, pages.length, (current, total) => {
+        setDownloadProgress(Math.round((current / total) * 100));
+      });
+
+      setDownloaded(true);
+    } catch (cause) {
+      setDownloadError(
+        cause instanceof Error ? cause.message : "Download failed.",
+      );
+    } finally {
+      setDownloadProgress(null);
+    }
+  }
+
+  async function handleRemoveDownload() {
+    await deleteDownloadedChapter(chapterId);
+
+    setDownloaded(false);
+  }
 
   // One re-resolve per expiry, however many pages 403 at once.
   const resolving = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
+    let objectUrls: string[] = [];
 
-    getChapterPages(chapterId, controller.signal)
-      .then((chapter) => setPages(chapter.pages))
-      .catch((cause: unknown) => {
+    async function load() {
+      setError(null);
+
+      try {
+        const chapter = await getChapterPages(chapterId, controller.signal);
+
         if (controller.signal.aborted) return;
+
+        setPages(chapter.pages);
+
+        setDownloaded(
+          await isChapterDownloaded(chapterId, chapter.pages.length),
+        );
+
+        setUsingOfflinePages(false);
+      } catch (cause: unknown) {
+        if (controller.signal.aborted) return;
+
+        const cachedCount = await getDownloadedPageCount(chapterId);
+
+        if (cachedCount > 0) {
+          objectUrls = await getDownloadedPageUrls(chapterId);
+
+          if (controller.signal.aborted) {
+            objectUrls.forEach(URL.revokeObjectURL);
+            return;
+          }
+
+          setPages(objectUrls);
+          setDownloaded(true);
+          setUsingOfflinePages(true);
+          return;
+        }
 
         setError(
           cause instanceof Error
             ? cause.message
             : "Unable to load this chapter.",
         );
-      })
-      .finally(() => {
+      } finally {
         resolving.current = false;
-      });
+      }
+    }
 
-    return () => controller.abort();
+    void load();
+
+    return () => {
+      controller.abort();
+      objectUrls.forEach(URL.revokeObjectURL);
+    };
   }, [chapterId, attempt]);
 
   /**
@@ -94,10 +167,36 @@ export function Reader({ chapterId, mangaId, heading }: ReaderProps) {
         >
           <span aria-hidden="true">←</span> Back
         </Link>
-        <h1 className="truncate text-sm font-semibold text-zinc-200">
+
+        <h1 className="min-w-0 flex-1 truncate text-center text-sm font-semibold text-zinc-200">
           {heading}
         </h1>
+
+        {pages && (
+          <button
+            type="button"
+            onClick={downloaded ? handleRemoveDownload : handleDownload}
+            disabled={downloadProgress !== null || usingOfflinePages}
+            className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloadProgress !== null
+              ? `${downloadProgress}%`
+              : downloaded
+                ? "Remove"
+                : "Download"}
+          </button>
+        )}
       </div>
+
+      {usingOfflinePages && (
+        <p className="text-center text-sm text-emerald-400">
+          Reading downloaded chapter
+        </p>
+      )}
+
+      {downloadError && (
+        <p className="text-center text-sm text-red-400">{downloadError}</p>
+      )}
 
       {pages === null ? (
         <p className="text-center text-sm text-zinc-500">Loading chapter…</p>

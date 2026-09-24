@@ -99,6 +99,32 @@ export async function getChapterPages(
   };
 }
 
+/** REPLACE WITH ACTUAL DOC */
+export async function getChapterPage(
+  chapterId: string,
+  pageIndex: number,
+): Promise<Response> {
+  const server = await getAtHomeServer(chapterId);
+  const { hash, data } = server.chapter;
+
+  const file = data[pageIndex];
+
+  if (!file) {
+    throw new RangeError("Chapter page does not exist.");
+  }
+
+  const url = `${server.baseUrl}/data/${hash}/${file}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `MangaDex@Home returned ${response.status} for chpater page.`,
+    );
+  }
+
+  return response;
+}
+
 /**
  * Forwards a client's page-load result to MangaDex@Home.
  *

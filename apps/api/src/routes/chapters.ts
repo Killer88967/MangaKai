@@ -1,7 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { validateJson } from "../lib/validation";
-import { getChapterPages, reportPageLoad } from "../services/chapters";
+import {
+  getChapterPage,
+  getChapterPages,
+  reportPageLoad,
+} from "../services/chapters";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,6 +59,44 @@ chapters.get("/:id/pages", async (c) => {
   } catch (error) {
     console.error("Failed to resolve chapter pages", error);
     return c.json({ error: "Unable to load this chapter." }, 502);
+  }
+});
+
+/** REPLACE WITH ACTUAL DOC */
+chapters.get("/:id/download/:page", async (c) => {
+  const id = c.req.param("id");
+  const rawPage = c.req.param("page");
+
+  if (!UUID_PATTERN.test(id)) {
+    return c.json({ error: "Invalid chapter id." }, 400);
+  }
+
+  const page = Number(rawPage);
+
+  if (!Number.isInteger(page) || page < 0) {
+    return c.json({ error: "Invalid page number." }, 400);
+  }
+
+  try {
+    const response = await getChapterPage(id, page);
+    const contentType =
+      response.headers.get("content-type") ?? "application/octet-stream";
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return c.json({ error: error.message }, 404);
+    }
+
+    console.error("Failed to download chapter page", error);
+
+    return c.json({ error: "Unable to download chapter page." }, 502);
   }
 });
 
