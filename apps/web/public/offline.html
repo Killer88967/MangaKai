@@ -123,6 +123,51 @@
         color: #34d399;
         font-size: 12px;
       }
+      
+      .online-banner {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        z-index: 50;
+
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+
+        width: min(calc(100% - 32px), 736px);
+        margin: 0 auto;
+        padding: 14px 16px;
+
+        border: 1px solid rgba(52, 211, 153, 0.25);
+        border-radius: 16px;
+
+        background: rgba(10, 9, 16, 0.96);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      }
+
+      .online-banner.visible {
+        display: flex;
+      }
+
+      .online-status {
+        color: #34d399;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .online-button {
+        flex-shrink: 0;
+        padding: 9px 12px;
+
+        border-radius: 10px;
+        background: #8b5cf6;
+
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+      }
 
       .page {
         display: block;
