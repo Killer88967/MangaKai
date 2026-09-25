@@ -211,17 +211,17 @@ export async function getMangaCoverImage(id: string): Promise<Response> {
     throw new Error("This manga has no cover.");
   }
 
-  const repsonse = await fetch(coverUrl, {
+  const response = await fetch(coverUrl, {
     headers: {
       "User-Agent": "MangaKai/1.0",
     },
   });
 
-  if (!repsonse.ok) {
-    throw new Error(`MangaDex cover request failed (${repsonse.status}).`);
+  if (!response.ok) {
+    throw new Error(`MangaDex cover request failed (${response.status}).`);
   }
 
-  return repsonse;
+  return response;
 }
 
 /**
