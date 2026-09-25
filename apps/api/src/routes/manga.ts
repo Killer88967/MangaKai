@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import { MANGA_CATEGORIES, type MangaCategory } from "@mangakai/shared";
 import { getChapters } from "../services/chapters";
-import { browseManga, getMangaById, searchManga } from "../services/manga";
+import {
+  browseManga,
+  getMangaById,
+  getMangaCoverImage,
+  searchManga,
+} from "../services/manga";
 
 /** MangaDex caps a feed page at 100, and a chapter list wants them all. */
 const CHAPTER_LIMIT = 100;
@@ -80,6 +85,31 @@ manga.get("/:id/chapters", async (c) => {
   } catch (error) {
     console.error("Failed to fetch chapters", error);
     return c.json({ error: "Unable to load chapters." }, 502);
+  }
+});
+
+manga.get("/:id/cover", async (c) => {
+  const id = c.req.param("id");
+
+  if (!UUID_PATTERN.test(id)) {
+    return c.json({ error: "Invalid manga id." }, 400);
+  }
+
+  try {
+    const response = await getMangaCoverImage(id);
+    const contentType = response.headers.get("content-type") ?? "image/jpeg";
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (error) {
+    console.error("Failed to fetch manga cover", error);
+
+    return c.json({ error: "Unable to load manga cover." }, 502);
   }
 });
 

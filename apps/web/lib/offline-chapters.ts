@@ -41,6 +41,10 @@ function pageCacheUrl(chapterId: string, page: number): string {
   return `/offline/chapters/${chapterId}/${page}`;
 }
 
+function coverCacheUrl(mangaId: string): string {
+  return `/offline/covers/${encodeURIComponent(mangaId)}`;
+}
+
 function readMetadata(): DownloadedChapter[] {
   if (typeof window === "undefined") return [];
 
@@ -59,8 +63,35 @@ function writeMetadata(chapters: DownloadedChapter[]): void {
   window.localStorage.setItem(METADATA_KEY, JSON.stringify(chapters));
 }
 
+/** @deprecated */
 function removeChapterMetadata(chapterId: string): void {
   writeMetadata(readMetadata().filter((item) => item.chapterId !== chapterId));
+}
+
+async function cacheMangaCover(mangaId: string | null): Promise<void> {
+  if (!mangaId) return;
+
+  const cache = await caches.open(CACHE_NAME);
+  const cacheUrl = coverCacheUrl(mangaId);
+
+  const existing = await cache.match(cacheUrl);
+
+  if (existing) return;
+
+  try {
+    const response = await fetch(
+      `/api/manga/${encodeURIComponent(mangaId)}/cover`,
+      {
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) return;
+
+    await cache.put(cacheUrl, response);
+  } catch {
+    // Cover failure should not stop the chapter itself from downloading.
+  }
 }
 
 export function getDownloadedChapters(): DownloadedChapter[] {
@@ -115,6 +146,19 @@ export function getDownloadedManga(): DownloadedManga[] {
   });
 }
 
+export async function getDownloadedCoverUrl(
+  mangaId: string,
+): Promise<string | null> {
+  const cache = await caches.open(CACHE_NAME);
+  const response = await cache.match(coverCacheUrl(mangaId));
+
+  if (!response) return null;
+
+  const blob = await response.blob();
+
+  return URL.createObjectURL(blob);
+}
+
 export async function getDownloadedPageCount(
   chapterId: string,
 ): Promise<number> {
@@ -146,6 +190,8 @@ export async function downloadChapter({
   onProgress,
 }: DownloadChapterOptions): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
+
+  await cacheMangaCover(mangaId);
 
   for (let page = 0; page < pageCount; page += 1) {
     const cacheUrl = pageCacheUrl(chapterId, page);
@@ -225,6 +271,9 @@ export function saveDownloadedChapterMetadata(
 export async function deleteDownloadedChapter(
   chapterId: string,
 ): Promise<void> {
+  const metadata = readMetadata();
+  const chapter = metadata.find((item) => item.chapterId === chapterId);
+
   const cache = await caches.open(CACHE_NAME);
   const requests = await cache.keys();
 
@@ -239,7 +288,16 @@ export async function deleteDownloadedChapter(
       .map((request) => cache.delete(request)),
   );
 
-  removeChapterMetadata(chapterId);
+  const remaining = metadata.filter((item) => item.chapterId !== chapterId);
+
+  writeMetadata(remaining);
+
+  if (
+    chapter?.mangaId &&
+    !remaining.some((item) => item.mangaId === chapter.mangaId)
+  ) {
+    await cache.delete(coverCacheUrl(chapter.mangaId));
+  }
 }
 
 /**
@@ -261,6 +319,12 @@ export async function deleteDownloadedManga(mangaId: string): Promise<void> {
   await Promise.all(
     chapters.map((chapter) => deleteDownloadedChapter(chapter.chapterId)),
   );
+
+  if (!mangaId.startsWith("unknown:")) {
+    const cache = await caches.open(CACHE_NAME);
+
+    await cache.delete(coverCacheUrl(mangaId));
+  }
 }
 
 export async function getDownloadedPageUrls(

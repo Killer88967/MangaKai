@@ -198,6 +198,33 @@ export async function getRecentlyAdded(limit: number): Promise<MangaSummary[]> {
 }
 
 /**
+ * Fetches the medium MangaDex cover used by MangaKai's offline library.
+ *
+ * This stays server-side so browsers never need to CORS-fetch MangaDex's
+ * uploads host when creating an offline download.
+ */
+export async function getMangaCoverImage(id: string): Promise<Response> {
+  const manga = await getMangaById(id);
+  const coverUrl = manga.cover?.medium ?? manga.cover?.original;
+
+  if (!coverUrl) {
+    throw new Error("This manga has no cover.");
+  }
+
+  const repsonse = await fetch(coverUrl, {
+    headers: {
+      "User-Agent": "MangaKai/1.0",
+    },
+  });
+
+  if (!repsonse.ok) {
+    throw new Error(`MangaDex cover request failed (${repsonse.status}).`);
+  }
+
+  return repsonse;
+}
+
+/**
  * Hydrates MangaKai references (staff picks, bookmarks, history) into real
  * manga. Returns a map so callers can preserve their own ordering.
  */

@@ -873,12 +873,40 @@
         return new Intl.DateTimeFormat(undefined, options).format(date);
       }
 
-      function createCover(cover, title, className) {
+      async function createCover(mangaId, cover, title, className) {
         const wrapper = document.createElement("div");
 
         wrapper.className = className;
 
-        if (cover) {
+        if (mangaId && !mangaId.startsWith("unknown:")) {
+          try {
+            const cache = await caches.open(CACHE_NAME);
+
+            const response = await cache.match(
+              `/offline/covers/${encodeURIComponent(mangaId)}`,
+            );
+
+            if (response) {
+              const blob = await response.blob();
+              const objectUrl = URL.createObjectURL(blob);
+
+              objectUrls.push(objectUrl);
+
+              const image = document.createElement("img");
+
+              image.src = objectUrl;
+              image.alt = `${title} cover`;
+
+              wrapper.appendChild(image);
+
+              return wrapper;
+            }
+          } catch {
+            // Fall through to the remote URL or placeholder.
+          }
+        }
+
+        if (cover && navigator.onLine) {
           const image = document.createElement("img");
 
           image.src = cover;
@@ -1128,7 +1156,12 @@
             });
           });
 
-          const cover = createCover(catalog.cover, catalog.title, "cover");
+          const cover = createCover(
+            catalog.mangaId,
+            catalog.cover,
+            catalog.title,
+            "cover",
+          );
 
           const content = document.createElement("div");
 
@@ -1253,7 +1286,12 @@
 
         header.className = "series-header";
 
-        const cover = createCover(catalog.cover, catalog.title, "series-cover");
+        const cover = createCover(
+          catalog.mangaId,
+          catalog.cover,
+          catalog.title,
+          "series-cover",
+        );
 
         const info = document.createElement("div");
 
