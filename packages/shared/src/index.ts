@@ -139,7 +139,7 @@ export interface AdminBanner extends Banner {
 
 export const USER_ROLES = ["user", "creator", "moderator", "admin"] as const;
 
-export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+export type UserRole = (typeof USER_ROLES)[number];
 
 /**
  * A MangaKai account.
