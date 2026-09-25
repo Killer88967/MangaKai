@@ -1,5 +1,11 @@
 import { cookies } from "next/headers";
-import type { AdminBanner, AdminStaffPick, ApiError } from "@mangakai/shared";
+import type {
+  AdminBanner,
+  AdminStaffPick,
+  AdminUser,
+  ApiError,
+  UserRole,
+} from "@mangakai/shared";
 import { SESSION_COOKIE } from "@/lib/session";
 
 const API_URL = process.env.API_URL ?? "http://localhost:8787";
@@ -11,7 +17,7 @@ const API_URL = process.env.API_URL ?? "http://localhost:8787";
  * the browser-facing `/api/ namespace, so server components call them directly
  * and forward the user's existing session as a bearer token.
  */
-async function adminFetch<T>(path: string): Promise<T> {
+async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
 
   if (!token) {
@@ -19,8 +25,10 @@ async function adminFetch<T>(path: string): Promise<T> {
   }
 
   const response = await fetch(`${API_URL}/admin${path}`, {
+    ...init,
     headers: {
       authorization: `Bearer ${token}`,
+      ...init?.headers,
     },
     cache: "no-store",
   });
@@ -40,4 +48,21 @@ export function getAdminBanners(): Promise<AdminBanner[]> {
 
 export function getAdminStaffPicks(): Promise<AdminStaffPick[]> {
   return adminFetch("/staff-picks");
+}
+
+export function getAdminUsers(): Promise<AdminUser[]> {
+  return adminFetch("/users");
+}
+
+export function updateAdminUserRole(
+  userId: string,
+  role: UserRole,
+): Promise<AdminUser> {
+  return adminFetch(`/users/${encodeURIComponent(userId)}/role`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ role }),
+  });
 }

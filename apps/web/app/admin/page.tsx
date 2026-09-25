@@ -111,7 +111,7 @@ export default async function AdminPage() {
               href="/admin/users"
               title="Users"
               description="View accounts and manage MangaKai roles."
-              status="Next"
+              status="Manage"
             />
 
             <AdminDestination
