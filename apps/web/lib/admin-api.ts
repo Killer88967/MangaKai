@@ -10,6 +10,18 @@ import { SESSION_COOKIE } from "@/lib/session";
 
 const API_URL = process.env.API_URL ?? "http://localhost:8787";
 
+export interface AdminBannerInput {
+  title: string;
+  body?: string | null;
+  imageUrl?: string | null;
+  linkUrl?: string | null;
+  linkLabel?: string | null;
+  variant?: "info" | "announcement" | "warning";
+  active?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
 /**
  * Server-only request helper for MangaKai's administrative API.
  *
@@ -39,6 +51,10 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(body.error ?? "Admin request failed.");
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
@@ -64,5 +80,36 @@ export function updateAdminUserRole(
       "content-type": "application/json",
     },
     body: JSON.stringify({ role }),
+  });
+}
+
+export function createAdminBanner(
+  input: AdminBannerInput,
+): Promise<AdminBanner> {
+  return adminFetch("/banners", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateAdminBanner(
+  id: string,
+  input: Partial<AdminBannerInput>,
+): Promise<AdminBanner> {
+  return adminFetch(`/banners/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteAdminBanner(id: string): Promise<void> {
+  return adminFetch(`/banners/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }
