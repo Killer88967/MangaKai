@@ -3,14 +3,12 @@ import { cookies } from "next/headers";
 import { BannerBar } from "@/components/banner-bar";
 import { SiteHeader } from "@/components/site-header";
 import { MobileNavigation } from "@/components/mobile-navigation";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ServiceWorkerRegister } from "@/components/worker-register";
 import { getBanners } from "@/lib/api";
 import { DISMISSED_COOKIE, parseDismissed } from "@/lib/dismissed-banners";
 import "./globals.css";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: {
@@ -60,21 +58,30 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     getBanners().catch(() => []),
     cookies(),
   ]);
+
   const dismissed = parseDismissed(cookieStore.get(DISMISSED_COOKIE)?.value);
 
   return (
-    <html lang="en" className={cn("h-full antialiased", "font-sans", geist.variable)}>
+    <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
-        <ServiceWorkerRegister />
-        <BannerBar
-          initialBanners={banners.filter(
-            (banner) => !dismissed.includes(banner.id),
-          )}
-          dismissedIds={dismissed}
-        />
-        <SiteHeader />
-        {children}
-        <MobileNavigation />
+        <TooltipProvider>
+          <ServiceWorkerRegister />
+
+          <BannerBar
+            initialBanners={banners.filter(
+              (banner) => !dismissed.includes(banner.id),
+            )}
+            dismissedIds={dismissed}
+          />
+
+          <SiteHeader />
+
+          {children}
+
+          <MobileNavigation />
+
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );
