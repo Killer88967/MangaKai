@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAdminBanners, getAdminStaffPicks } from "@/lib/admin-api";
+import {
+  getAdminBanners,
+  getAdminStaffPicks,
+  getAdminUsers,
+} from "@/lib/admin-api";
 import { getCurrentUser } from "@/lib/session";
 
 export default async function AdminPage() {
@@ -14,15 +18,24 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [banners, staffPicks] = await Promise.all([
+  const [banners, staffPicks, users] = await Promise.all([
     getAdminBanners().catch(() => null),
     getAdminStaffPicks().catch(() => null),
+    getAdminUsers().catch(() => null),
   ]);
 
   const activeBanners =
     banners?.filter((banner) => banner.active).length ?? null;
 
   const activePicks = staffPicks?.filter((pick) => pick.active).length ?? null;
+
+  const draftPicks = staffPicks?.filter((pick) => !pick.active).length ?? null;
+
+  const adminCount =
+    users?.filter((account) => account.role === "admin").length ?? null;
+
+  const creatorCount =
+    users?.filter((account) => account.role === "creator").length ?? null;
 
   return (
     <main className="flex-1">
@@ -67,11 +80,23 @@ export default async function AdminPage() {
               label="Staff picks"
               value={staffPicks ? staffPicks.length : "—"}
               detail={
-                activePicks === null ? "Unavailable" : `${activePicks} active`
+                activePicks === null || draftPicks === null
+                  ? "Unavailable"
+                  : `${activePicks} active · ${draftPicks} draft`
               }
             />
 
-            <DashboardStat label="Users" value="—" detail="Coming next" />
+            <DashboardStat
+              label="Users"
+              value={users ? users.length : "—"}
+              detail={
+                users
+                  ? `${adminCount ?? 0} admin${adminCount === 1 ? "" : "s"} · ${
+                      creatorCount ?? 0
+                    } creator${creatorCount === 1 ? "" : "s"}`
+                  : "Unavailable"
+              }
+            />
 
             <DashboardStat label="Reports" value="—" detail="Not configured" />
           </div>
@@ -111,7 +136,7 @@ export default async function AdminPage() {
               href="/admin/users"
               title="Users"
               description="View accounts and manage MangaKai roles."
-              status="Manage"
+              status={users ? `${users.length} accounts` : "API Unavailable"}
             />
 
             <AdminDestination
