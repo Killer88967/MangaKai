@@ -156,6 +156,20 @@ export interface User {
 }
 
 /**
+ * User information exposed to administrators.
+ *
+ * Kept separate from `User` so public/profile-facing account shapes can evolve
+ * later without accidentally exposing admin-only account data.
+ */
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+/**
  * What `register` and `login` return.
  *
  * The API sets an httpOnly cookie *and* returns the token, because the two

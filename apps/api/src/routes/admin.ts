@@ -1,9 +1,10 @@
 import { Hono } from "hono";
-import { BANNER_VARIANTS } from "@mangakai/shared";
+import { BANNER_VARIANTS, USER_ROLES } from "@mangakai/shared";
 import { z } from "zod";
 import { publish } from "../lib/events";
 import { validateJson } from "../lib/validation";
 import { requireAdmin } from "../middleware/admin";
+import type { UserVariables } from "../middleware/user";
 import {
   createBanner,
   deleteBanner,
@@ -18,8 +19,9 @@ import {
   switchStaffPick,
   updateStaffPick,
 } from "../services/staff-picks";
+import { listUsers, updateUserRole } from "../services/admin-users";
 
-const UUID = z.string().uuid();
+const UUID = z.uuid();
 const nullableText = z.string().trim().min(1).nullish();
 const scheduledAt = z.coerce.date().nullish();
 
@@ -69,9 +71,44 @@ const staffPickSwitch = z.object({
 
 const staffPickMove = z.object({ position: z.number().int().min(0) });
 
-const admin = new Hono();
+const admin = new Hono<UserVariables>();
 
 admin.use("*", requireAdmin);
+
+const userRolePatch = z.object({
+  role: z.enum(USER_ROLES),
+});
+
+admin.get("/users", async (c) => {
+  return c.json(await listUsers());
+});
+
+admin.patch("/users/:id/role", validateJson(userRolePatch), async (c) => {
+  const id = c.req.param("id");
+
+  if (!UUID.safeParse(id).success) {
+    return c.json({ error: "Invalid user id." }, 400);
+  }
+
+  const currentUser = c.get("user");
+
+  /**
+   * Until MangaKai has safeguards around the final administrator account,
+   * admins cannot change their own role. This avoids accidentally locking
+   * yourself out of the entire admin area.
+   */
+  if (id === currentUser.id) {
+    return c.json({ error: "You cannot change your own role." }, 400);
+  }
+
+  const user = await updateUserRole(id, c.req.valid("json").role);
+
+  if (!user) {
+    return c.json({ error: "User not found." }, 404);
+  }
+
+  return c.json(user);
+});
 
 admin.get("/banners", async (c) => c.json(await listAllBanners()));
 
