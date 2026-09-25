@@ -14,7 +14,7 @@ const API_URL = process.env.API_URL ?? "http://localhost:8787";
  * Server-only request helper for MangaKai's administrative API.
  *
  * Admin endpoints are mounted directly under `/admin` on the API rather than
- * the browser-facing `/api/ namespace, so server components call them directly
+ * the browser-facing `/api/` namespace, so server components call them directly
  * and forward the user's existing session as a bearer token.
  */
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
