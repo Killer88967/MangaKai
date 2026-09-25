@@ -11,7 +11,7 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/92 backdrop-blur-xl">
-      <nav className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-5 px-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex h-16 w-full max-w-360 items-center gap-5 px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="shrink-0 text-lg font-black tracking-[-0.04em] text-white"
@@ -33,6 +33,15 @@ export async function SiteHeader() {
           >
             Downloads
           </Link>
+
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-brand-hover transition hover:bg-brand-soft hover:text-white"
+            >
+              Admin
+            </Link>
+          )}
         </div>
 
         <div className="ml-auto flex items-center gap-2">
