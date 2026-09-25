@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/(auth)/actions";
 import { getCurrentUser } from "@/lib/session";
+import { AvatarDropdownMenu } from "@/components/avatar-dropdown-menu";
 
 /**
  * Rendered on the server, so the signed-in state is in the initial HTML — no
@@ -46,22 +47,7 @@ export async function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-2">
           {user ? (
-            <>
-              <div className="hidden min-w-0 sm:block">
-                <p className="max-w-40 truncate text-sm font-medium text-zinc-200">
-                  {user.displayName}
-                </p>
-              </div>
-
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  className="h-10 rounded-xl px-3 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white"
-                >
-                  Sign out
-                </button>
-              </form>
-            </>
+            <AvatarDropdownMenu user={user} />
           ) : (
             <>
               <Link
