@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { logoutAction } from "@/app/(auth)/actions";
 import { getCurrentUser } from "@/lib/session";
 import { AvatarDropdownMenu } from "@/components/avatar-dropdown-menu";
 

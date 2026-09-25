@@ -49,8 +49,13 @@ export function AvatarDropdownMenu({ user }: AvatarDropdownMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="Open account menu"
-        className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-brand/40"
+        render={
+          <button
+            type="button"
+            aria-label="Open account menu"
+            className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-brand/40"
+          />
+        }
       >
         <Avatar className="size-9 cursor-pointer ring-1 ring-white/10 transition hover:ring-brand/60">
           {user.avatarUrl ? (
