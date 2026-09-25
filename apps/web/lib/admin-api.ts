@@ -22,6 +22,13 @@ export interface AdminBannerInput {
   endsAt?: string | null;
 }
 
+export interface AdminStaffPickInput {
+  mangaId: string;
+  note?: string | null;
+  position?: number;
+  active?: boolean;
+}
+
 /**
  * Server-only request helper for MangaKai's administrative API.
  *
@@ -110,6 +117,72 @@ export function updateAdminBanner(
 
 export function deleteAdminBanner(id: string): Promise<void> {
   return adminFetch(`/banners/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function createAdminStaffPick(
+  input: AdminStaffPickInput,
+): Promise<void> {
+  return adminFetch("/staff-picks", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateAdminStaffPick(
+  mangaId: string,
+  input: {
+    note?: string | null;
+    position?: number;
+    active?: boolean;
+  },
+): Promise<AdminStaffPick> {
+  return adminFetch(`/staff-picks/${encodeURIComponent(mangaId)}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function moveAdminStaffPick(
+  mangaId: string,
+  position: number,
+): Promise<AdminStaffPick[]> {
+  return adminFetch(`/staff-picks/${encodeURIComponent(mangaId)}/move`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ position }),
+  });
+}
+
+export function switchAdminStaffPick(
+  from: string,
+  to: string,
+  note?: string | null,
+): Promise<AdminStaffPick> {
+  return adminFetch("/staff-picks/switch", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      note,
+    }),
+  });
+}
+
+export function deleteAdminStaffPick(mangaId: string): Promise<void> {
+  return adminFetch(`/staff-picks/${encodeURIComponent(mangaId)}`, {
     method: "DELETE",
   });
 }
