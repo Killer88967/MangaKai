@@ -1,4 +1,4 @@
-const SHELL_CACHE = "mangakai-v5";
+const SHELL_CACHE = "mangakai-v6";
 const CHAPTER_CACHE = "mangakai-chapters-v1";
 
 const PRECACHE = [
