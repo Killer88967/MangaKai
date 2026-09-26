@@ -213,12 +213,22 @@ export async function getMangaCoverImage(id: string): Promise<Response> {
 
   const response = await fetch(coverUrl, {
     headers: {
-      "User-Agent": "MangaKai/1.0",
+      Referer: "https://mangadex.org/",
+      "User-Agent":
+        "Mozilla/5.0 (compatible; MangaKai/1.0; +https://mangakai-zeta.vercel.app)",
     },
   });
 
   if (!response.ok) {
     throw new Error(`MangaDex cover request failed (${response.status}).`);
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.startsWith("image/")) {
+    throw new Error(
+      `MangaDex returned an unexpected cover type: ${contentType}`,
+    );
   }
 
   return response;
