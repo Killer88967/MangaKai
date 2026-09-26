@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
+import users from "./routes/users";
 import admin from "./routes/admin";
 import auth from "./routes/auth";
 import banners from "./routes/banners";
@@ -21,6 +22,7 @@ app.get("/", (c) => {
 });
 
 app.route("/api/auth", auth);
+app.route("/api/users", users);
 app.route("/api/home", home);
 app.route("/api/manga", manga);
 app.route("/api/chapters", chapters);

@@ -26,6 +26,18 @@ export const users = pgTable("users", {
   /** scrypt, with its parameters embedded — see `apps/api/src/lib/password.ts`. */
   passwordHash: text("password_hash").notNull(),
   displayName: text("display_name").notNull(),
+  /**
+   * Public profile handle
+   *
+   * Stored already lowercased and trimmed. Nullable for existing accounts so
+   * the profile system can be introduced without forcing a migration-time
+   * username onto everyone.
+   */
+  username: text("username").unique(),
+  /** Short public profile biography. */
+  bio: text("bio"),
+  /** Public avatar URL. Upload storage can replace this later */
+  avatarUrl: text("avatar_url"),
 
   /**
    * Application permissions.

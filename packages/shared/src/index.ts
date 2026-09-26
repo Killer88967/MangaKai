@@ -151,6 +151,24 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  username: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  role: UserRole;
+  createdAt: string;
+}
+
+/**
+ * Public-facing MangaKai profile.
+ *
+ * Email and other account-only data are deliberately excluded.
+ */
+export interface PublicProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
   role: UserRole;
   createdAt: string;
 }

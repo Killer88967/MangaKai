@@ -14,10 +14,7 @@ import { logoutAction } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface AvatarDropdownMenuProps {
-  user: User & {
-    username?: string | null;
-    avatarUrl?: string | null;
-  };
+  user: User;
 }
 
 function getInitials(displayName: string): string {
