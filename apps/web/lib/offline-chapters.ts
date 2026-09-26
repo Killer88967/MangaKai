@@ -1,5 +1,5 @@
-const CACHE_NAME = "mangakai-chapters-v1";
-const METADATA_KEY = "mangakai-downloaded-chapters-v1";
+const CACHE_NAME = "mangakai-chapters-v2";
+const METADATA_KEY = "mangakai-downloaded-chapters-v2";
 
 export interface DownloadedChapter {
   chapterId: string;
