@@ -1141,7 +1141,7 @@
             });
           });
 
-          const cover = createCover(
+          const cover = await createCover(
             catalog.mangaId,
             catalog.cover,
             catalog.title,
@@ -1271,7 +1271,7 @@
 
         header.className = "series-header";
 
-        const cover = createCover(
+        const cover = await createCover(
           catalog.mangaId,
           catalog.cover,
           catalog.title,

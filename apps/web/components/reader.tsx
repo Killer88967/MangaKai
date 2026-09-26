@@ -106,7 +106,14 @@ export function Reader({
 
         if (controller.signal.aborted) return;
 
-        setPages(chapter.pages);
+        setPages(
+          chapter.pages.map(
+            (_, index) =>
+              `/api/chapters/${encodeURIComponent(
+                chapterId,
+              )}/download/${index}?attempt=${attempt}`,
+          ),
+        );
 
         const isDownloaded = await isChapterDownloaded(
           chapterId,
